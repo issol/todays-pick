@@ -13,20 +13,17 @@ export function CategoryGrid() {
 
   const handleToggleAll = () => {
     if (allSelected) {
-      // If all selected, deselect all except the first one (ensure at least one)
-      setCategories([CATEGORIES[0].label]);
+      setCategories([CATEGORIES[0].id]);
     } else {
-      // Select all
-      setCategories(CATEGORIES.map((c) => c.label));
+      setCategories(CATEGORIES.map((c) => c.id));
     }
   };
 
-  const handleCategoryToggle = (categoryLabel: string) => {
-    // Prevent deselecting the last category
-    if (selectedCategories.length === 1 && selectedCategories.includes(categoryLabel)) {
+  const handleCategoryToggle = (categoryId: string) => {
+    if (selectedCategories.length === 1 && selectedCategories.includes(categoryId)) {
       return;
     }
-    toggleCategory(categoryLabel);
+    toggleCategory(categoryId);
   };
 
   return (
@@ -51,8 +48,8 @@ export function CategoryGrid() {
             key={cat.id}
             category={cat.label}
             iconName={cat.iconName}
-            selected={selectedCategories.includes(cat.label)}
-            onToggle={() => handleCategoryToggle(cat.label)}
+            selected={selectedCategories.includes(cat.id)}
+            onToggle={() => handleCategoryToggle(cat.id)}
           />
         ))}
       </div>
