@@ -1,0 +1,3 @@
+-- Seed data for development/testing
+-- No seed data needed for MVP - users are created via anonymous auth
+-- Restaurant data comes from Naver API at runtime
