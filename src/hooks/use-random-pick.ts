@@ -6,11 +6,11 @@ import { usePickStore } from '@/stores/pick-store';
 import type { Restaurant } from '@/lib/naver/types';
 
 interface SearchRestaurantsRequest {
-  latitude: number;
-  longitude: number;
+  lat: number;
+  lng: number;
   radius: number;
   categories: string[];
-  qualityFilter: boolean;
+  excludeIds?: string[];
 }
 
 interface PickRandomRequest {
@@ -55,11 +55,10 @@ export function useRandomPick() {
 
       // Step 1: Search restaurants
       const searchPayload: SearchRestaurantsRequest = {
-        latitude: currentLocation.lat,
-        longitude: currentLocation.lng,
+        lat: currentLocation.lat,
+        lng: currentLocation.lng,
         radius,
         categories: selectedCategories,
-        qualityFilter: true,
       };
 
       const searchResponse = await fetch(
