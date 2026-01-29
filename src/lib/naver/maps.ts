@@ -61,6 +61,22 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string |
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const naver = (window as any).naver;
+
+  // Wait for Service submodule to be ready (geocoder loads async)
+  if (!naver?.maps?.Service) {
+    await new Promise<void>((resolve) => {
+      let attempts = 0;
+      const check = () => {
+        if (naver?.maps?.Service || attempts >= 20) {
+          resolve();
+        } else {
+          attempts++;
+          setTimeout(check, 100);
+        }
+      };
+      check();
+    });
+  }
   if (!naver?.maps?.Service) return null;
 
   return new Promise((resolve) => {

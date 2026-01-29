@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Search, Navigation, Loader2 } from 'lucide-react';
+import { Search, Navigation, Loader2, MapPin } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -38,7 +38,7 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { requestLocation, isLoading, error } = useGeolocation();
-  const { currentLocation, locationError, setLocation, setLocationAddress } = useAppStore();
+  const { currentLocation, locationAddress, locationError, setLocation, setLocationAddress } = useAppStore();
 
   // Clear search state when modal closes
   useEffect(() => {
@@ -155,6 +155,17 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
         </SheetHeader>
 
         <div className="mt-6 space-y-4">
+          {/* Current Location Display */}
+          {locationAddress && (
+            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+              <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground">현재 설정된 위치</p>
+                <p className="text-sm font-medium truncate">{locationAddress}</p>
+              </div>
+            </div>
+          )}
+
           {/* Search Input with Autocomplete */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
