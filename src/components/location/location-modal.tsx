@@ -40,19 +40,15 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
   const { requestLocation, isLoading, error } = useGeolocation();
   const { currentLocation, locationError, setLocation, setLocationAddress } = useAppStore();
 
-  // Auto-detect location only once when modal first opens with no location
-  const hasAutoDetectedRef = useRef(false);
+  // Clear search state when modal closes
   useEffect(() => {
-    if (open && !currentLocation && !hasAutoDetectedRef.current) {
-      hasAutoDetectedRef.current = true;
-      requestLocation().catch(() => {
-        // Silent — user can manually set location
-      });
-    }
     if (!open) {
-      hasAutoDetectedRef.current = false;
+      setSearchQuery('');
+      setSearchError(null);
+      setSuggestions([]);
+      setShowSuggestions(false);
     }
-  }, [open, currentLocation, requestLocation]);
+  }, [open]);
 
   // Debounced combined search for autocomplete suggestions
   const handleInputChange = useCallback((value: string) => {
@@ -142,6 +138,7 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
   const handleCurrentLocation = async () => {
     try {
       await requestLocation();
+      onOpenChange(false);
     } catch (err) {
       console.error('Failed to get current location:', err);
     }

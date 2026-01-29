@@ -32,12 +32,6 @@ export function useGeolocation() {
         return;
       }
 
-      // Prevent concurrent GPS requests
-      if (state.isLoading) {
-        reject(new Error('GPS 요청이 이미 진행 중입니다'));
-        return;
-      }
-
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
       setIsLocating(true);
       setLocationError(null);
