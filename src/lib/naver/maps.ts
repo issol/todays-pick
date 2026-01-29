@@ -91,11 +91,19 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string |
   });
 }
 
+export interface GeocodedAddress {
+  lat: number;
+  lng: number;
+  roadAddress: string;
+  jibunAddress: string;
+}
+
 /**
  * Forward geocode an address/place query to get coordinates.
  * Uses Naver Maps SDK geocoder submodule.
+ * Returns coordinates + full address for display.
  */
-export async function geocodeAddress(query: string): Promise<{ lat: number; lng: number } | null> {
+export async function geocodeAddress(query: string): Promise<GeocodedAddress | null> {
   await loadNaverMapsSDK();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -116,7 +124,45 @@ export async function geocodeAddress(query: string): Promise<{ lat: number; lng:
         resolve({
           lat: parseFloat(item.y),
           lng: parseFloat(item.x),
+          roadAddress: item.roadAddress || '',
+          jibunAddress: item.jibunAddress || '',
         });
+      }
+    );
+  });
+}
+
+/**
+ * Search for addresses matching a query string.
+ * Returns a list of address suggestions for autocomplete.
+ */
+export async function searchAddress(query: string): Promise<GeocodedAddress[]> {
+  await loadNaverMapsSDK();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const naver = (window as any).naver;
+  if (!naver?.maps?.Service) return [];
+
+  return new Promise((resolve) => {
+    naver.maps.Service.geocode(
+      { query },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (status: number, response: any) => {
+        if (status !== 200 || !response?.v2?.addresses?.length) {
+          resolve([]);
+          return;
+        }
+
+        const results: GeocodedAddress[] = response.v2.addresses.map(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (item: any) => ({
+            lat: parseFloat(item.y),
+            lng: parseFloat(item.x),
+            roadAddress: item.roadAddress || '',
+            jibunAddress: item.jibunAddress || '',
+          })
+        );
+        resolve(results);
       }
     );
   });
