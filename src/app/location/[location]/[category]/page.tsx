@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createMetadata, breadcrumbJsonLd, getLocationBySlug, getTopLocations } from '@/lib/seo';
 import { CATEGORIES } from '@/lib/utils/constants';
@@ -79,11 +80,11 @@ export default async function LocationCategoryPage({ params }: LocationCategoryP
       <div className="container mx-auto max-w-6xl px-4 py-12">
         <header className="mb-12">
           <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-600">
-            <a href="/" className="hover:text-orange-500">홈</a>
+            <Link href="/" className="hover:text-orange-500">홈</Link>
             <span>/</span>
-            <a href={`/location/${location.slug}`} className="hover:text-orange-500">
+            <Link href={`/location/${location.slug}`} className="hover:text-orange-500">
               {location.name}
-            </a>
+            </Link>
             <span>/</span>
             <span className="text-gray-900">{category.label}</span>
           </div>
@@ -146,12 +147,12 @@ export default async function LocationCategoryPage({ params }: LocationCategoryP
             <p className="mb-4 text-gray-600">
               {location.name} {category.label} 맛집 목록은 곧 업데이트됩니다.
             </p>
-            <a
+            <Link
               href="/"
               className="inline-block rounded-lg bg-orange-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-orange-600"
             >
               지금 랜덤 추천받기
-            </a>
+            </Link>
           </div>
         </section>
 
@@ -161,13 +162,13 @@ export default async function LocationCategoryPage({ params }: LocationCategoryP
             {CATEGORIES.filter((cat) => cat.id !== category.id)
               .slice(0, 7)
               .map((cat) => (
-                <a
+                <Link
                   key={cat.id}
                   href={`/location/${location.slug}/${cat.id}`}
                   className="block rounded-lg border border-gray-200 bg-white p-4 text-center transition-all hover:border-orange-500 hover:shadow-md"
                 >
                   <h3 className="font-semibold">{cat.label}</h3>
-                </a>
+                </Link>
               ))}
           </div>
         </section>
@@ -180,12 +181,12 @@ export default async function LocationCategoryPage({ params }: LocationCategoryP
             {location.name} 주변의 {category.label} 맛집을 3초 만에 추천받아보세요.
             위치를 허용하고 원하는 카테고리를 선택하면 바로 추천받을 수 있습니다.
           </p>
-          <a
+          <Link
             href="/"
             className="inline-block rounded-lg bg-orange-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-orange-600"
           >
             {location.name} {category.label} 추천받기
-          </a>
+          </Link>
         </section>
       </div>
     </>

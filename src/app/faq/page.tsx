@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { createMetadata, faqPageJsonLd } from '@/lib/seo';
 
 const faqs = [
@@ -102,12 +103,12 @@ export default function FAQPage() {
           <p className="mb-6 text-gray-700">
             추가 문의사항이 있으시면 언제든지 연락주세요.
           </p>
-          <a
+          <Link
             href="/"
             className="inline-block rounded-lg bg-orange-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-orange-600"
           >
             맛집 추천받기
-          </a>
+          </Link>
         </section>
       </div>
     </>

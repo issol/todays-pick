@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createMetadata, itemListJsonLd, breadcrumbJsonLd, getLocationBySlug, getAllLocationSlugs } from '@/lib/seo';
 import { CATEGORIES } from '@/lib/utils/constants';
@@ -106,12 +107,12 @@ export default async function LocationPage({ params }: LocationPageProps) {
             <p className="mb-4 text-gray-600">
               {location.name} 지역의 맛집 목록은 곧 업데이트됩니다.
             </p>
-            <a
+            <Link
               href="/"
               className="inline-block rounded-lg bg-orange-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-orange-600"
             >
               지금 랜덤 추천받기
-            </a>
+            </Link>
           </div>
         </section>
 
@@ -135,12 +136,12 @@ export default async function LocationPage({ params }: LocationPageProps) {
               <span>카테고리별 맞춤 추천</span>
             </li>
           </ul>
-          <a
+          <Link
             href="/"
             className="inline-block rounded-lg bg-orange-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-orange-600"
           >
             맛집 추천받기
-          </a>
+          </Link>
         </section>
       </div>
     </>

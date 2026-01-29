@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { createMetadata, webApplicationJsonLd } from '@/lib/seo';
 
 export const metadata: Metadata = createMetadata({
@@ -93,12 +94,12 @@ export default function AboutPage() {
           <p className="mb-6 text-gray-700">
             복잡한 선택의 고민을 덜어드립니다. 오늘의 점심, 오늘의 픽과 함께하세요.
           </p>
-          <a
+          <Link
             href="/"
             className="inline-block rounded-lg bg-orange-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-orange-600"
           >
             맛집 추천받기
-          </a>
+          </Link>
         </section>
       </div>
     </>

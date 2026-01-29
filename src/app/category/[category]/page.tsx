@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createMetadata, breadcrumbJsonLd, getTopLocations } from '@/lib/seo';
 import { CATEGORIES } from '@/lib/utils/constants';
@@ -125,12 +126,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             내 주변의 {category.label} 맛집을 3초 만에 추천받아보세요.
             위치를 허용하고 {category.label} 카테고리를 선택하면 바로 추천됩니다.
           </p>
-          <a
+          <Link
             href="/"
             className="inline-block rounded-lg bg-orange-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-orange-600"
           >
             {category.label} 맛집 추천받기
-          </a>
+          </Link>
         </section>
       </div>
     </>

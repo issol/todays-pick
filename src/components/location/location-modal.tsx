@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useGeolocation } from '@/hooks/use-geolocation';
 import { RadiusSelector } from './radius-selector';
+import { NaverMap } from './naver-map';
 import { useAppStore } from '@/stores/app-store';
 
 interface LocationModalProps {
@@ -91,10 +92,8 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
             <RadiusSelector />
           </div>
 
-          {/* Map Preview Placeholder */}
-          <div className="mt-6 h-64 bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
-            지도 미리보기 (추후 구현)
-          </div>
+          {/* Map Preview */}
+          <NaverMap className="mt-6" />
         </div>
       </SheetContent>
     </Sheet>
