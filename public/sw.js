@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE_NAME = `todays-pick-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
@@ -38,6 +38,12 @@ self.addEventListener('fetch', (event) => {
 
   // Skip non-GET requests
   if (request.method !== 'GET') {
+    return;
+  }
+
+  // Skip Next.js build assets — they use content-hashed filenames
+  // and are served with immutable cache headers by Next.js/Vercel
+  if (url.pathname.startsWith('/_next/')) {
     return;
   }
 
