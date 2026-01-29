@@ -58,10 +58,10 @@ Deno.serve(async (req) => {
       chinese: '중식',
       japanese: '일식',
       western: '양식',
-      asian: '아시안',
-      cafe: '카페',
-      dessert: '디저트',
-      bar: '술집',
+      snacks: '분식',
+      cafe: '카페 디저트',
+      fastfood: '패스트푸드',
+      latenight: '야식',
     };
 
     // Search for each category and merge results
