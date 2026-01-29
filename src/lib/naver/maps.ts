@@ -168,6 +168,31 @@ export async function searchAddress(query: string): Promise<GeocodedAddress[]> {
   });
 }
 
+export interface PlaceSearchResult {
+  name: string;
+  roadAddress: string;
+  jibunAddress: string;
+  lat: number;
+  lng: number;
+  category: string;
+}
+
+/**
+ * Search for places by name via Naver Search Local API (server-side proxy).
+ * Works for place names, landmarks, station names, etc.
+ */
+export async function searchPlace(query: string): Promise<PlaceSearchResult[]> {
+  try {
+    const params = new URLSearchParams({ query });
+    const response = await fetch(`/api/search-place?${params}`);
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.items || [];
+  } catch {
+    return [];
+  }
+}
+
 // Type augmentation for Naver Maps on window
 declare global {
   interface Window {

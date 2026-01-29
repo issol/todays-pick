@@ -15,7 +15,7 @@ import { useGeolocation } from '@/hooks/use-geolocation';
 import { RadiusSelector } from './radius-selector';
 import { NaverMap } from './naver-map';
 import { useAppStore } from '@/stores/app-store';
-import { searchAddress, reverseGeocode, type GeocodedAddress } from '@/lib/naver/maps';
+import { searchAddress, searchPlace, reverseGeocode, type GeocodedAddress, type PlaceSearchResult } from '@/lib/naver/maps';
 
 interface LocationModalProps {
   open: boolean;
@@ -26,7 +26,15 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<GeocodedAddress[]>([]);
+  type Suggestion = {
+    type: 'address';
+    data: GeocodedAddress;
+  } | {
+    type: 'place';
+    data: PlaceSearchResult;
+  };
+
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { requestLocation, isLoading, error } = useGeolocation();
@@ -41,7 +49,7 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
     }
   }, [open, currentLocation, requestLocation]);
 
-  // Debounced address search for autocomplete suggestions
+  // Debounced combined search for autocomplete suggestions
   const handleInputChange = useCallback((value: string) => {
     setSearchQuery(value);
     setSearchError(null);
@@ -58,9 +66,19 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
 
     debounceRef.current = setTimeout(async () => {
       try {
-        const results = await searchAddress(value.trim());
-        setSuggestions(results);
-        setShowSuggestions(results.length > 0);
+        // Search both address geocode and place name in parallel
+        const [addrResults, placeResults] = await Promise.all([
+          searchAddress(value.trim()),
+          searchPlace(value.trim()),
+        ]);
+
+        const combined: Suggestion[] = [
+          ...addrResults.map((a): Suggestion => ({ type: 'address', data: a })),
+          ...placeResults.map((p): Suggestion => ({ type: 'place', data: p })),
+        ];
+
+        setSuggestions(combined);
+        setShowSuggestions(combined.length > 0);
       } catch {
         setSuggestions([]);
         setShowSuggestions(false);
@@ -68,10 +86,21 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
     }, 300);
   }, []);
 
-  const selectAddress = useCallback(async (addr: GeocodedAddress) => {
-    setLocation({ lat: addr.lat, lng: addr.lng });
-    const displayAddr = addr.roadAddress || addr.jibunAddress;
-    setLocationAddress(displayAddr);
+  const selectSuggestion = useCallback(async (item: Suggestion) => {
+    const lat = item.type === 'address' ? item.data.lat : item.data.lat;
+    const lng = item.type === 'address' ? item.data.lng : item.data.lng;
+    setLocation({ lat, lng });
+
+    let displayAddr: string;
+    if (item.type === 'address') {
+      displayAddr = item.data.roadAddress || item.data.jibunAddress;
+    } else {
+      displayAddr = item.data.name + (item.data.roadAddress ? ` (${item.data.roadAddress})` : '');
+    }
+
+    // Also get short area name for the location bar
+    const areaName = await reverseGeocode(lat, lng);
+    setLocationAddress(areaName || displayAddr);
     setSearchQuery(displayAddr);
     setSuggestions([]);
     setShowSuggestions(false);
@@ -85,11 +114,18 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
     setShowSuggestions(false);
 
     try {
-      const results = await searchAddress(searchQuery.trim());
-      if (results.length > 0) {
-        await selectAddress(results[0]);
+      // Try address geocode first, then place name search
+      const [addrResults, placeResults] = await Promise.all([
+        searchAddress(searchQuery.trim()),
+        searchPlace(searchQuery.trim()),
+      ]);
+
+      if (addrResults.length > 0) {
+        await selectSuggestion({ type: 'address', data: addrResults[0] });
+      } else if (placeResults.length > 0) {
+        await selectSuggestion({ type: 'place', data: placeResults[0] });
       } else {
-        setSearchError('검색 결과를 찾을 수 없습니다. 도로명이나 지번 주소를 입력해주세요.');
+        setSearchError('검색 결과를 찾을 수 없습니다');
       }
     } catch {
       setSearchError('주소 검색 중 오류가 발생했습니다');
@@ -144,26 +180,40 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
               <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
             )}
 
-            {/* Address Suggestions Dropdown */}
+            {/* Suggestions Dropdown */}
             {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-background border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                {suggestions.map((addr, idx) => (
+              <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                {suggestions.map((item, idx) => (
                   <button
                     key={idx}
                     type="button"
                     className="w-full text-left px-4 py-3 text-sm hover:bg-accent transition-colors border-b last:border-b-0"
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      selectAddress(addr);
+                      selectSuggestion(item);
                     }}
                   >
-                    <div className="font-medium">
-                      {addr.roadAddress || addr.jibunAddress}
-                    </div>
-                    {addr.roadAddress && addr.jibunAddress && (
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        (지번) {addr.jibunAddress}
-                      </div>
+                    {item.type === 'address' ? (
+                      <>
+                        <div className="font-medium">
+                          {item.data.roadAddress || item.data.jibunAddress}
+                        </div>
+                        {item.data.roadAddress && item.data.jibunAddress && (
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            (지번) {item.data.jibunAddress}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="font-medium">{item.data.name}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {item.data.roadAddress || item.data.jibunAddress}
+                          {item.data.category && (
+                            <span className="ml-1 text-muted-foreground/60">· {item.data.category}</span>
+                          )}
+                        </div>
+                      </>
                     )}
                   </button>
                 ))}
