@@ -14,13 +14,18 @@ interface SearchRestaurantsRequest {
 }
 
 interface PickRandomRequest {
-  restaurants: Restaurant[];
-  excludeIds: string[];
+  lat: number;
+  lng: number;
+  radius: number;
+  categories: string[];
+  excludeIds?: string[];
+  userId?: string;
 }
 
 interface PickRandomResponse {
-  pick: Restaurant;
+  picked: Restaurant;
   alternatives: Restaurant[];
+  timestamp: string;
 }
 
 export function useRandomPick() {
@@ -89,7 +94,10 @@ export function useRandomPick() {
       // Step 2: Pick random restaurant
       setIsPicking(true);
       const pickPayload: PickRandomRequest = {
-        restaurants,
+        lat: currentLocation.lat,
+        lng: currentLocation.lng,
+        radius,
+        categories: selectedCategories,
         excludeIds: currentPick ? [currentPick.id] : [],
       };
 
@@ -110,10 +118,10 @@ export function useRandomPick() {
       }
 
       const result: PickRandomResponse = await pickResponse.json();
-      setCurrentPick(result.pick);
+      setCurrentPick(result.picked);
       setAlternatives(result.alternatives);
 
-      return result.pick;
+      return result.picked;
     } catch (error) {
       const message =
         error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다';
@@ -146,8 +154,16 @@ export function useRandomPick() {
       setIsPicking(true);
       setError(null);
 
+      if (!currentLocation) {
+        setError('위치 정보가 필요합니다');
+        return null;
+      }
+
       const pickPayload: PickRandomRequest = {
-        restaurants: searchResults,
+        lat: currentLocation.lat,
+        lng: currentLocation.lng,
+        radius,
+        categories: selectedCategories,
         excludeIds: currentPick ? [currentPick.id] : [],
       };
 
@@ -168,11 +184,11 @@ export function useRandomPick() {
       }
 
       const result: PickRandomResponse = await pickResponse.json();
-      setCurrentPick(result.pick);
+      setCurrentPick(result.picked);
       setAlternatives(result.alternatives);
       incrementRetry();
 
-      return result.pick;
+      return result.picked;
     } catch (error) {
       const message =
         error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다';
@@ -182,7 +198,9 @@ export function useRandomPick() {
       setIsPicking(false);
     }
   }, [
-    searchResults,
+    currentLocation,
+    selectedCategories,
+    radius,
     currentPick,
     setIsPicking,
     setError,
