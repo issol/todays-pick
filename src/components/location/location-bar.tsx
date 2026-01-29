@@ -1,16 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MapPin, ChevronRight } from 'lucide-react';
 import { useAppStore } from '@/stores/app-store';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LocationModal } from './location-modal';
+import { useGeolocation } from '@/hooks/use-geolocation';
 import { cn } from '@/lib/utils';
 
 export function LocationBar() {
   const [modalOpen, setModalOpen] = useState(false);
   const { currentLocation, isLocating, locationAddress } = useAppStore();
+  const { requestLocation } = useGeolocation();
+  const hasAutoDetected = useRef(false);
+
+  // Auto-detect GPS on first page load
+  useEffect(() => {
+    if (!currentLocation && !hasAutoDetected.current) {
+      hasAutoDetected.current = true;
+      requestLocation().catch(() => {
+        // Silent — user can set location manually via modal
+      });
+    }
+  }, [currentLocation, requestLocation]);
 
   const displayAddress = locationAddress
     || (currentLocation
