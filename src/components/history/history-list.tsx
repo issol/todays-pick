@@ -3,13 +3,16 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useHistory } from '@/hooks/use-history';
+import { useAuth } from '@/hooks/use-auth';
 import { HistoryItem } from './history-item';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
+import { LogIn } from 'lucide-react';
 
 export function HistoryList() {
   const { history, loading, error, hasMore, fetchHistory, deleteHistoryItem, totalCount } = useHistory();
+  const { isAnonymous, signInWithGoogle } = useAuth();
   const [currentPage, setCurrentPage] = useState(0);
 
   useEffect(() => {
@@ -69,6 +72,21 @@ export function HistoryList() {
 
   return (
     <div className="px-4 pb-6">
+      {/* Login banner for anonymous users */}
+      {isAnonymous && (
+        <Card className="mb-4 border-dashed">
+          <CardContent className="flex items-center justify-between p-4">
+            <p className="text-sm text-muted-foreground">
+              로그인하면 기록이 영구 저장됩니다.
+            </p>
+            <Button variant="outline" size="sm" className="gap-2 shrink-0" onClick={() => signInWithGoogle()}>
+              <LogIn className="h-4 w-4" />
+              로그인
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Total count */}
       <div className="mb-4 text-sm text-muted-foreground">
         총 {totalCount}개의 기록

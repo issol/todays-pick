@@ -4,8 +4,13 @@ import Link from 'next/link';
 import { History, Heart, ShieldOff } from 'lucide-react';
 import { ThemeToggle } from './theme-toggle';
 import { Button } from '@/components/ui/button';
+import { LoginButton } from '@/components/auth/login-button';
+import { UserMenu } from '@/components/auth/user-menu';
+import { useAuth } from '@/hooks/use-auth';
 
 export function Header() {
+  const { loading, isAnonymous } = useAuth();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between">
@@ -35,6 +40,9 @@ export function Header() {
           </Link>
 
           <ThemeToggle />
+
+          {/* Auth */}
+          {!loading && (isAnonymous ? <LoginButton /> : <UserMenu />)}
         </div>
       </div>
     </header>

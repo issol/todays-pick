@@ -29,11 +29,14 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
+  // Skip anonymous session creation for auth callback route
+  const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback');
+
   // Refresh session if expired
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Auto-create anonymous session if no user
-  if (!user) {
+  // Auto-create anonymous session if no user (skip during OAuth callback)
+  if (!user && !isAuthCallback) {
     await supabase.auth.signInAnonymously();
   }
 

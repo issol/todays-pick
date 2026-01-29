@@ -17,18 +17,30 @@ export interface Database {
           created_at: string;
           last_location: unknown | null;
           preferences: Json;
+          email: string | null;
+          display_name: string | null;
+          avatar_url: string | null;
+          is_anonymous: boolean;
         };
         Insert: {
           id?: string;
           created_at?: string;
           last_location?: unknown | null;
           preferences?: Json;
+          email?: string | null;
+          display_name?: string | null;
+          avatar_url?: string | null;
+          is_anonymous?: boolean;
         };
         Update: {
           id?: string;
           created_at?: string;
           last_location?: unknown | null;
           preferences?: Json;
+          email?: string | null;
+          display_name?: string | null;
+          avatar_url?: string | null;
+          is_anonymous?: boolean;
         };
       };
       picks_history: {
