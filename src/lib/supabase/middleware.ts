@@ -29,15 +29,20 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Skip anonymous session creation for auth callback route
-  const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback');
+  try {
+    // Skip anonymous session creation for auth callback route
+    const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback');
 
-  // Refresh session if expired
-  const { data: { user } } = await supabase.auth.getUser();
+    // Refresh session if expired
+    const { data: { user } } = await supabase.auth.getUser();
 
-  // Auto-create anonymous session if no user (skip during OAuth callback)
-  if (!user && !isAuthCallback) {
-    await supabase.auth.signInAnonymously();
+    // Auto-create anonymous session if no user (skip during OAuth callback)
+    if (!user && !isAuthCallback) {
+      await supabase.auth.signInAnonymously();
+    }
+  } catch {
+    // Supabase auth call failed — continue without session
+    // This prevents middleware crashes on cold starts or network issues
   }
 
   return supabaseResponse;
