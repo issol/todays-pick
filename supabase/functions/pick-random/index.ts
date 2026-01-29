@@ -11,6 +11,7 @@ interface PickRequestBody {
   categories: string[];
   excludeIds?: string[];
   userId?: string;
+  areaName?: string;
 }
 
 Deno.serve(async (req) => {
@@ -30,7 +31,7 @@ Deno.serve(async (req) => {
 
     // Parse request body
     const body: PickRequestBody = await req.json();
-    const { lat, lng, radius, categories, excludeIds = [], userId } = body;
+    const { lat, lng, radius, categories, excludeIds = [], userId, areaName } = body;
 
     // Validate input
     if (typeof lat !== 'number' || typeof lng !== 'number') {
@@ -71,8 +72,10 @@ Deno.serve(async (req) => {
     const seenIds = new Set<string>();
 
     for (const category of categories) {
-      const query = categoryQueries[category];
-      if (!query) continue;
+      const baseQuery = categoryQueries[category];
+      if (!baseQuery) continue;
+
+      const query = areaName ? `${areaName} ${baseQuery} 맛집` : baseQuery;
 
       try {
         const results = await searchRestaurants(query, lat, lng, radius);

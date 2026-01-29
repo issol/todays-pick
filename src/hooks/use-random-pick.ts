@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 import { useAppStore } from '@/stores/app-store';
 import { usePickStore } from '@/stores/pick-store';
+import { reverseGeocode } from '@/lib/naver/maps';
 import type { Restaurant } from '@/lib/naver/types';
 
 interface SearchRestaurantsRequest {
@@ -11,6 +12,7 @@ interface SearchRestaurantsRequest {
   radius: number;
   categories: string[];
   excludeIds?: string[];
+  areaName?: string;
 }
 
 interface PickRandomRequest {
@@ -20,6 +22,7 @@ interface PickRandomRequest {
   categories: string[];
   excludeIds?: string[];
   userId?: string;
+  areaName?: string;
 }
 
 interface PickRandomResponse {
@@ -58,12 +61,16 @@ export function useRandomPick() {
       setIsSearching(true);
       setError(null);
 
+      // Get area name for location-aware search
+      const areaName = await reverseGeocode(currentLocation.lat, currentLocation.lng).catch(() => null);
+
       // Step 1: Search restaurants
       const searchPayload: SearchRestaurantsRequest = {
         lat: currentLocation.lat,
         lng: currentLocation.lng,
         radius,
         categories: selectedCategories,
+        ...(areaName && { areaName }),
       };
 
       const searchResponse = await fetch(
@@ -99,6 +106,7 @@ export function useRandomPick() {
         radius,
         categories: selectedCategories,
         excludeIds: currentPick ? [currentPick.id] : [],
+        ...(areaName && { areaName }),
       };
 
       const pickResponse = await fetch(
@@ -159,12 +167,15 @@ export function useRandomPick() {
         return null;
       }
 
+      const areaName = await reverseGeocode(currentLocation.lat, currentLocation.lng).catch(() => null);
+
       const pickPayload: PickRandomRequest = {
         lat: currentLocation.lat,
         lng: currentLocation.lng,
         radius,
         categories: selectedCategories,
         excludeIds: currentPick ? [currentPick.id] : [],
+        ...(areaName && { areaName }),
       };
 
       const pickResponse = await fetch(

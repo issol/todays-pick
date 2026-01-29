@@ -137,21 +137,18 @@ export async function searchRestaurants(
   query: string,
   lat: number,
   lng: number,
-  radius: number
+  _radius: number
 ): Promise<Omit<Restaurant, 'curationScore'>[]> {
   const response = await searchLocalRestaurants({
     query,
-    display: 20, // Max results per query
+    display: 5, // Naver Local Search API max useful results
     sort: 'comment',
   });
 
-  // Parse and filter by distance
+  // Parse and sort by distance (no hard cutoff — area name in query ensures locality)
   const restaurants = response.items
     .map(item => parseNaverSearchItem(item, lat, lng))
-    .filter(restaurant => {
-      if (!restaurant.distance) return true;
-      return restaurant.distance <= radius;
-    });
+    .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
 
   return restaurants;
 }

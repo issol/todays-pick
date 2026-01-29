@@ -9,6 +9,7 @@ interface SearchRequestBody {
   radius: number;
   categories: string[];
   excludeIds?: string[];
+  areaName?: string;
 }
 
 Deno.serve(async (req) => {
@@ -28,7 +29,7 @@ Deno.serve(async (req) => {
 
     // Parse request body
     const body: SearchRequestBody = await req.json();
-    const { lat, lng, radius, categories, excludeIds = [] } = body;
+    const { lat, lng, radius, categories, excludeIds = [], areaName } = body;
 
     // Validate input
     if (typeof lat !== 'number' || typeof lng !== 'number') {
@@ -69,11 +70,13 @@ Deno.serve(async (req) => {
     const seenIds = new Set<string>();
 
     for (const category of categories) {
-      const query = categoryQueries[category];
-      if (!query) {
+      const baseQuery = categoryQueries[category];
+      if (!baseQuery) {
         console.warn(`Unknown category: ${category}`);
         continue;
       }
+
+      const query = areaName ? `${areaName} ${baseQuery} 맛집` : baseQuery;
 
       try {
         const results = await searchRestaurants(query, lat, lng, radius);

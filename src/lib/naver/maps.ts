@@ -52,6 +52,45 @@ export function isNaverMapsLoaded(): boolean {
   return isLoaded;
 }
 
+/**
+ * Reverse geocode coordinates to get a district/neighborhood name.
+ * Uses Naver Maps SDK geocoder submodule.
+ */
+export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  await loadNaverMapsSDK();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const naver = (window as any).naver;
+  if (!naver?.maps?.Service) return null;
+
+  return new Promise((resolve) => {
+    naver.maps.Service.reverseGeocode(
+      {
+        coords: new naver.maps.LatLng(lat, lng),
+        orders: [naver.maps.Service.OrderType.LEGAL_CODE].join(','),
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (status: number, response: any) => {
+        if (status !== 200 || !response?.v2?.results?.length) {
+          resolve(null);
+          return;
+        }
+
+        const result = response.v2.results[0];
+        const region = result.region;
+        // Build area name: 시/구/동 level
+        const parts: string[] = [];
+        if (region?.area1?.name) parts.push(region.area1.name); // 시/도
+        if (region?.area2?.name) parts.push(region.area2.name); // 구/군
+        if (region?.area3?.name) parts.push(region.area3.name); // 동/면/읍
+
+        // Return 구 + 동 level (e.g., "금천구 시흥동")
+        resolve(parts.slice(1).join(' ') || parts[0] || null);
+      }
+    );
+  });
+}
+
 // Type augmentation for Naver Maps on window
 declare global {
   interface Window {
