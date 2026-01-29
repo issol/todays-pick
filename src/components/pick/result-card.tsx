@@ -106,25 +106,33 @@ export function ResultCard({ restaurant, userLocation }: ResultCardProps) {
           </div>
 
           {/* Rating */}
-          <div className="flex items-center gap-2 mb-3">
-            <div className="flex items-center gap-0.5">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star
-                  key={star}
-                  className={cn(
-                    'w-4 h-4',
-                    star <= Math.round(restaurant.rating)
-                      ? 'fill-yellow-400 text-yellow-400'
-                      : 'text-gray-300'
-                  )}
-                />
-              ))}
+          {restaurant.rating > 0 ? (
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-0.5">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={cn(
+                      'w-4 h-4',
+                      star <= Math.round(restaurant.rating)
+                        ? 'fill-yellow-400 text-yellow-400'
+                        : 'text-gray-300'
+                    )}
+                  />
+                ))}
+              </div>
+              <span className="text-sm font-semibold">{restaurant.rating.toFixed(1)}</span>
+              {restaurant.reviewCount > 0 && (
+                <span className="text-xs text-gray-500">
+                  ({restaurant.reviewCount.toLocaleString()}개 리뷰)
+                </span>
+              )}
             </div>
-            <span className="text-sm font-semibold">{restaurant.rating.toFixed(1)}</span>
-            <span className="text-xs text-gray-500">
-              ({restaurant.reviewCount.toLocaleString()}개 리뷰)
-            </span>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2 mb-3 text-sm text-gray-400">
+              리뷰 정보 없음
+            </div>
+          )}
 
           {/* Distance */}
           {distance && (
@@ -140,11 +148,13 @@ export function ResultCard({ restaurant, userLocation }: ResultCardProps) {
           </p>
 
           {/* Curation Score */}
-          <div className="flex items-center gap-2">
-            <Badge className={cn('font-semibold', curationStyle.bg)}>
-              {curationStyle.text} {restaurant.curationScore}
-            </Badge>
-          </div>
+          {restaurant.curationScore > 0 && (
+            <div className="flex items-center gap-2">
+              <Badge className={cn('font-semibold', curationStyle.bg)}>
+                {curationStyle.text} {restaurant.curationScore}
+              </Badge>
+            </div>
+          )}
         </CardContent>
       </Card>
     </motion.div>

@@ -131,64 +131,79 @@ export function parseNaverSearchItem(
 }
 
 /**
- * Enrich restaurant data with blog review count and thumbnail image.
- * Uses Naver Blog Search API to find reviews and images.
+ * Fetch place detail from Naver Place page to get rating, reviews, and images.
+ * Scrapes the place home page and extracts embedded __NEXT_DATA__ JSON.
  */
-async function enrichWithBlogData(
+async function fetchPlaceDetail(
   restaurant: Omit<Restaurant, 'curationScore'>
 ): Promise<Omit<Restaurant, 'curationScore'>> {
-  const clientId = Deno.env.get('NAVER_CLIENT_ID');
-  const clientSecret = Deno.env.get('NAVER_CLIENT_SECRET');
-
-  if (!clientId || !clientSecret) return restaurant;
+  // Only fetch if we have a numeric place ID (not a fallback ID)
+  if (!restaurant.id || restaurant.id.startsWith('naver_')) {
+    return restaurant;
+  }
 
   try {
-    const query = `${restaurant.name} ${restaurant.roadAddress || restaurant.address} 맛집 리뷰`;
-    const params = new URLSearchParams({
-      query,
-      display: '10',
-      sort: 'sim',
-    });
-
-    const response = await fetch(`https://openapi.naver.com/v1/search/blog.json?${params}`, {
+    const placeUrl = `https://pcmap.place.naver.com/restaurant/${restaurant.id}/home`;
+    const response = await fetch(placeUrl, {
       headers: {
-        'X-Naver-Client-Id': clientId,
-        'X-Naver-Client-Secret': clientSecret,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'ko-KR,ko;q=0.9',
       },
     });
 
-    if (!response.ok) return restaurant;
+    if (!response.ok) {
+      console.warn(`Place page returned ${response.status} for ${restaurant.id}`);
+      return restaurant;
+    }
 
-    const data = await response.json();
-    const blogReviewCount = data.total || 0;
+    const html = await response.text();
 
-    // Extract first thumbnail image from blog results if available
-    let imageUrl: string | undefined = undefined;
-    // Blog API doesn't include images directly, so we keep imageUrl as undefined
+    let rating = restaurant.rating;
+    let reviewCount = restaurant.reviewCount;
+    let blogReviewCount = restaurant.blogReviewCount;
+    let imageUrl = restaurant.imageUrl;
 
-    // Estimate rating based on blog popularity
-    // More blog reviews generally correlate with better restaurants
-    let estimatedRating = 0;
-    if (blogReviewCount >= 1000) estimatedRating = 4.5;
-    else if (blogReviewCount >= 500) estimatedRating = 4.3;
-    else if (blogReviewCount >= 200) estimatedRating = 4.1;
-    else if (blogReviewCount >= 100) estimatedRating = 3.9;
-    else if (blogReviewCount >= 50) estimatedRating = 3.7;
-    else if (blogReviewCount >= 10) estimatedRating = 3.5;
-    else estimatedRating = 0;
+    // Extract visitor review rating: "visitorReviewScore":"4.12" or similar patterns
+    const ratingMatch = html.match(/"visitorReviewScore"\s*:\s*"?([\d.]+)"?/);
+    if (ratingMatch) {
+      const parsed = parseFloat(ratingMatch[1]);
+      if (!isNaN(parsed) && parsed > 0) rating = parsed;
+    }
 
-    // Estimate visitor review count from blog count (roughly 5-10x blog reviews)
-    const estimatedReviewCount = Math.round(blogReviewCount * 3);
+    // Extract visitor review count: "visitorReviewCount":123 or "totalCount":123
+    const reviewCountMatch = html.match(/"visitorReviewCount"\s*:\s*(\d+)/);
+    if (reviewCountMatch) {
+      reviewCount = parseInt(reviewCountMatch[1], 10);
+    }
+
+    // Extract blog review count
+    const blogCountMatch = html.match(/"blogCafeReviewCount"\s*:\s*(\d+)/);
+    if (blogCountMatch) {
+      blogReviewCount = parseInt(blogCountMatch[1], 10);
+    }
+
+    // Extract image URL from og:image meta tag or image patterns
+    const ogImageMatch = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/);
+    if (ogImageMatch && ogImageMatch[1]) {
+      imageUrl = ogImageMatch[1];
+    } else {
+      // Try to find image from the page data
+      const imageMatch = html.match(/"imageUrl"\s*:\s*"(https?:\/\/[^"]+)"/);
+      if (imageMatch && imageMatch[1]) {
+        imageUrl = imageMatch[1];
+      }
+    }
 
     return {
       ...restaurant,
-      rating: estimatedRating,
-      reviewCount: estimatedReviewCount,
-      blogReviewCount: Math.min(blogReviewCount, 9999),
+      rating,
+      reviewCount,
+      blogReviewCount,
       imageUrl,
     };
   } catch (error) {
-    console.error(`Error enriching restaurant ${restaurant.name}:`, error);
+    console.error(`Error fetching place detail for ${restaurant.name} (${restaurant.id}):`, error);
     return restaurant;
   }
 }
@@ -213,9 +228,9 @@ export async function searchRestaurants(
     .map(item => parseNaverSearchItem(item, lat, lng))
     .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
 
-  // Enrich with blog review data (parallel for speed)
+  // Enrich with place detail data (parallel for speed)
   const enriched = await Promise.all(
-    restaurants.map(r => enrichWithBlogData(r))
+    restaurants.map(r => fetchPlaceDetail(r))
   );
 
   return enriched;
