@@ -40,12 +40,17 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
   const { requestLocation, isLoading, error } = useGeolocation();
   const { currentLocation, locationError, setLocation, setLocationAddress } = useAppStore();
 
-  // Auto-detect location when modal opens and no location is set
+  // Auto-detect location only once when modal first opens with no location
+  const hasAutoDetectedRef = useRef(false);
   useEffect(() => {
-    if (open && !currentLocation) {
+    if (open && !currentLocation && !hasAutoDetectedRef.current) {
+      hasAutoDetectedRef.current = true;
       requestLocation().catch(() => {
         // Silent — user can manually set location
       });
+    }
+    if (!open) {
+      hasAutoDetectedRef.current = false;
     }
   }, [open, currentLocation, requestLocation]);
 
