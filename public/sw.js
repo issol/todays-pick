@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `todays-pick-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
@@ -47,12 +47,23 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Navigation requests (HTML pages) - network first
+  // Prevents stale HTML from referencing outdated chunk hashes
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .catch(() => {
+          return caches.match('/offline.html');
+        })
+    );
+    return;
+  }
+
   // API calls - network first
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Clone and cache successful responses
           if (response.ok) {
             const responseClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
@@ -62,14 +73,13 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Return cached version if available
           return caches.match(request);
         })
     );
     return;
   }
 
-  // Static assets - cache first
+  // Other assets (images, icons) - cache first
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -78,12 +88,10 @@ self.addEventListener('fetch', (event) => {
 
       return fetch(request)
         .then((response) => {
-          // Don't cache non-successful responses
           if (!response || response.status !== 200 || response.type !== 'basic') {
             return response;
           }
 
-          // Clone and cache
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(request, responseClone);
@@ -91,12 +99,7 @@ self.addEventListener('fetch', (event) => {
 
           return response;
         })
-        .catch(() => {
-          // For navigation requests, return offline page
-          if (request.mode === 'navigate') {
-            return caches.match('/offline.html');
-          }
-        });
+        .catch(() => undefined);
     })
   );
 });
