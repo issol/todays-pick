@@ -10,12 +10,12 @@ import { cn } from '@/lib/utils';
 
 export function LocationBar() {
   const [modalOpen, setModalOpen] = useState(false);
-  const { currentLocation, isLocating } = useAppStore();
+  const { currentLocation, isLocating, locationAddress } = useAppStore();
 
-  // TODO: Implement reverse geocoding to get address from coordinates
-  const displayAddress = currentLocation
-    ? `${currentLocation.lat.toFixed(4)}, ${currentLocation.lng.toFixed(4)}`
-    : null;
+  const displayAddress = locationAddress
+    || (currentLocation
+      ? `${currentLocation.lat.toFixed(4)}, ${currentLocation.lng.toFixed(4)}`
+      : null);
 
   const truncateAddress = (address: string, maxLength: number = 30) => {
     if (address.length <= maxLength) return address;

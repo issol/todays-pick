@@ -12,6 +12,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useBlacklist } from '@/hooks/use-blacklist';
+import { useAuth } from '@/hooks/use-auth';
+import { LoginPromptDialog } from '@/components/auth/login-prompt-dialog';
 import type { Restaurant } from '@/lib/naver/types';
 
 interface BlacklistButtonProps {
@@ -29,6 +31,8 @@ export function BlacklistButton({ restaurant }: BlacklistButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedReason, setSelectedReason] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isAnonymous } = useAuth();
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const { addToBlacklist, isBlacklisted } = useBlacklist();
 
   const handleAddToBlacklist = async () => {
@@ -53,7 +57,13 @@ export function BlacklistButton({ restaurant }: BlacklistButtonProps) {
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          if (isAnonymous) {
+            setShowLoginPrompt(true);
+            return;
+          }
+          setIsOpen(true);
+        }}
         disabled={alreadyBlacklisted}
         title={alreadyBlacklisted ? '이미 차단된 맛집' : '차단 목록에 추가'}
       >
@@ -99,6 +109,12 @@ export function BlacklistButton({ restaurant }: BlacklistButtonProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <LoginPromptDialog
+        open={showLoginPrompt}
+        onOpenChange={setShowLoginPrompt}
+        message="차단 목록을 사용하려면 로그인이 필요합니다"
+      />
     </>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useAppStore } from '@/stores/app-store';
 import { LocationCoords } from '@/types';
 import { GEOLOCATION_TIMEOUT } from '@/lib/utils/constants';
+import { reverseGeocode } from '@/lib/naver/maps';
 
 interface GeolocationState {
   location: LocationCoords | null;
@@ -18,7 +19,7 @@ export function useGeolocation() {
     isLoading: false,
   });
 
-  const { setLocation, setLocationError, setIsLocating } = useAppStore();
+  const { setLocation, setLocationError, setIsLocating, setLocationAddress } = useAppStore();
 
   const requestLocation = useCallback(async (): Promise<LocationCoords> => {
     return new Promise((resolve, reject) => {
@@ -53,6 +54,16 @@ export function useGeolocation() {
           setState({ location: coords, error: null, isLoading: false });
           setLocation(coords);
           setIsLocating(false);
+
+          // Reverse geocode in background (don't block resolve)
+          reverseGeocode(coords.lat, coords.lng).then((address) => {
+            if (address) {
+              setLocationAddress(address);
+            }
+          }).catch(() => {
+            // Silently ignore reverse geocode errors
+          });
+
           resolve(coords);
         },
         (error) => {
@@ -85,7 +96,7 @@ export function useGeolocation() {
         }
       );
     });
-  }, [setLocation, setLocationError, setIsLocating]);
+  }, [setLocation, setLocationError, setIsLocating, setLocationAddress]);
 
   return {
     location: state.location,

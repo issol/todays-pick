@@ -67,7 +67,7 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string |
     naver.maps.Service.reverseGeocode(
       {
         coords: new naver.maps.LatLng(lat, lng),
-        orders: [naver.maps.Service.OrderType.LEGAL_CODE].join(','),
+        orders: [naver.maps.Service.OrderType.ADMCODE].join(','),
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (status: number, response: any) => {
@@ -86,6 +86,37 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string |
 
         // Return 구 + 동 level (e.g., "금천구 시흥동")
         resolve(parts.slice(1).join(' ') || parts[0] || null);
+      }
+    );
+  });
+}
+
+/**
+ * Forward geocode an address/place query to get coordinates.
+ * Uses Naver Maps SDK geocoder submodule.
+ */
+export async function geocodeAddress(query: string): Promise<{ lat: number; lng: number } | null> {
+  await loadNaverMapsSDK();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const naver = (window as any).naver;
+  if (!naver?.maps?.Service) return null;
+
+  return new Promise((resolve) => {
+    naver.maps.Service.geocode(
+      { query },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (status: number, response: any) => {
+        if (status !== 200 || !response?.v2?.addresses?.length) {
+          resolve(null);
+          return;
+        }
+
+        const item = response.v2.addresses[0];
+        resolve({
+          lat: parseFloat(item.y),
+          lng: parseFloat(item.x),
+        });
       }
     );
   });

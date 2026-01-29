@@ -6,6 +6,7 @@ interface AppState {
   currentLocation: { lat: number; lng: number } | null;
   locationError: string | null;
   isLocating: boolean;
+  locationAddress: string | null;
 
   // Category
   selectedCategories: string[];
@@ -23,6 +24,7 @@ interface AppState {
   setLocation: (loc: { lat: number; lng: number } | null) => void;
   setLocationError: (error: string | null) => void;
   setIsLocating: (v: boolean) => void;
+  setLocationAddress: (address: string | null) => void;
   toggleCategory: (cat: string) => void;
   setCategories: (cats: string[]) => void;
   togglePriceRange: (range: string) => void;
@@ -37,15 +39,17 @@ export const useAppStore = create<AppState>((set) => ({
   currentLocation: null,
   locationError: null,
   isLocating: false,
+  locationAddress: null,
   selectedCategories: [],
   selectedPriceRanges: [],
   radius: DEFAULT_RADIUS,
   isPickInProgress: false,
 
   // Actions
-  setLocation: (loc) => set({ currentLocation: loc, locationError: null }),
+  setLocation: (loc) => set({ currentLocation: loc, locationError: null, locationAddress: null }),
   setLocationError: (error) => set({ locationError: error }),
   setIsLocating: (v) => set({ isLocating: v }),
+  setLocationAddress: (address) => set({ locationAddress: address }),
   toggleCategory: (cat) =>
     set((state) => ({
       selectedCategories: state.selectedCategories.includes(cat)
@@ -67,6 +71,7 @@ export const useAppStore = create<AppState>((set) => ({
       currentLocation: null,
       locationError: null,
       isLocating: false,
+      locationAddress: null,
       selectedCategories: [],
       selectedPriceRanges: [],
       radius: DEFAULT_RADIUS,

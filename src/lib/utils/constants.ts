@@ -24,7 +24,7 @@ export const RADIUS_OPTIONS = [
 
 export const DEFAULT_RADIUS = 500;
 
-export const MAX_RETRIES = 3;
+export const MAX_RETRIES = 2;
 
 export const QUALITY_FILTER_DEFAULTS = {
   minRating: 4.0,

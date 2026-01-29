@@ -15,6 +15,7 @@ import { useGeolocation } from '@/hooks/use-geolocation';
 import { RadiusSelector } from './radius-selector';
 import { NaverMap } from './naver-map';
 import { useAppStore } from '@/stores/app-store';
+import { geocodeAddress, reverseGeocode } from '@/lib/naver/maps';
 
 interface LocationModalProps {
   open: boolean;
@@ -23,8 +24,10 @@ interface LocationModalProps {
 
 export function LocationModal({ open, onOpenChange }: LocationModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const { requestLocation, isLoading, error } = useGeolocation();
-  const { locationError } = useAppStore();
+  const { locationError, setLocation, setLocationAddress } = useAppStore();
 
   const handleCurrentLocation = async () => {
     try {
@@ -36,9 +39,29 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
     }
   };
 
-  const handleSearch = () => {
-    // TODO: Implement address search in next task
-    console.log('Search query:', searchQuery);
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+
+    setIsSearching(true);
+    setSearchError(null);
+
+    try {
+      const result = await geocodeAddress(searchQuery.trim());
+      if (result) {
+        setLocation(result);
+        // Reverse geocode to get display address
+        const address = await reverseGeocode(result.lat, result.lng);
+        if (address) {
+          setLocationAddress(address);
+        }
+      } else {
+        setSearchError('검색 결과를 찾을 수 없습니다');
+      }
+    } catch {
+      setSearchError('주소 검색 중 오류가 발생했습니다');
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   return (
@@ -66,6 +89,7 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
                 }
               }}
               className="pl-10"
+              disabled={isSearching}
             />
           </div>
 
@@ -81,9 +105,9 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
           </Button>
 
           {/* Error Display */}
-          {(error || locationError) && (
+          {(error || locationError || searchError) && (
             <div className="text-sm text-destructive">
-              {error || locationError}
+              {error || locationError || searchError}
             </div>
           )}
 
