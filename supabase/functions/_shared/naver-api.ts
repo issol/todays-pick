@@ -252,14 +252,14 @@ async function enrichRestaurantData(
  * To get more results, we run multiple semantically different queries per category.
  */
 const CATEGORY_SUB_QUERIES: Record<string, string[]> = {
-  '한식': ['한식 맛집', '한식 식당', '한정식', '국밥', '백반', '삼겹살', '갈비', '찌개'],
-  '중식': ['중식 맛집', '중식 식당', '중국집', '짜장면', '짬뽕', '마라탕'],
-  '일식': ['일식 맛집', '일식 식당', '초밥', '라멘', '돈가스', '우동'],
-  '양식': ['양식 맛집', '양식 식당', '파스타', '스테이크', '피자', '브런치'],
-  '분식': ['분식 맛집', '분식 식당', '떡볶이', '김밥', '라면'],
-  '카페 디저트': ['카페 맛집', '디저트', '케이크', '베이커리', '브런치카페'],
-  '패스트푸드': ['패스트푸드', '버거', '치킨', '샌드위치'],
-  '야식': ['야식 맛집', '포장마차', '치킨집', '족발', '보쌈'],
+  '한식': ['한식 맛집', '한식 식당', '한정식', '국밥', '백반', '삼겹살', '갈비', '찌개', '비빔밥', '냉면', '칼국수', '설렁탕', '김치찌개', '된장찌개', '불고기', '순두부'],
+  '중식': ['중식 맛집', '중식 식당', '중국집', '짜장면', '짬뽕', '마라탕', '양꼬치', '훠궈', '딤섬', '탕수육'],
+  '일식': ['일식 맛집', '일식 식당', '초밥', '라멘', '돈가스', '우동', '이자카야', '사시미', '소바', '카레', '오마카세'],
+  '양식': ['양식 맛집', '양식 식당', '파스타', '스테이크', '피자', '브런치', '리조또', '햄버거', '와인바', '비스트로'],
+  '분식': ['분식 맛집', '분식 식당', '떡볶이', '김밥', '라면', '순대', '만두', '튀김', '쫄면', '우동'],
+  '카페 디저트': ['카페 맛집', '디저트', '케이크', '베이커리', '브런치카페', '마카롱', '아이스크림', '와플', '도넛'],
+  '패스트푸드': ['패스트푸드', '버거', '치킨', '샌드위치', '타코', '핫도그', '피자배달'],
+  '야식': ['야식 맛집', '포장마차', '치킨집', '족발', '보쌈', '곱창', '막창', '회', '라면'],
 };
 
 /**
@@ -273,7 +273,8 @@ export async function searchLocalRestaurantsExpanded(
   const subQueries = CATEGORY_SUB_QUERIES[categoryQuery] || [`${categoryQuery} 맛집`, `${categoryQuery} 식당`];
   const prefix = areaName ? `${areaName} ` : '';
 
-  const requests = subQueries.map(sq =>
+  // Run all sub-queries with 'comment' sort (most reviewed)
+  const commentRequests = subQueries.map(sq =>
     searchLocalRestaurants({
       query: `${prefix}${sq}`,
       display: 5,
@@ -284,7 +285,20 @@ export async function searchLocalRestaurantsExpanded(
     })
   );
 
-  const responses = await Promise.all(requests);
+  // Also run a few queries with 'random' sort for diversity
+  const randomQueries = subQueries.slice(0, 3);
+  const randomRequests = randomQueries.map(sq =>
+    searchLocalRestaurants({
+      query: `${prefix}${sq}`,
+      display: 5,
+      sort: 'random',
+    }).catch((err) => {
+      console.warn(`Random sub-query search failed for "${prefix}${sq}":`, err);
+      return null;
+    })
+  );
+
+  const responses = await Promise.all([...commentRequests, ...randomRequests]);
   const allItems: NaverSearchLocalItem[] = [];
   const seenKeys = new Set<string>();
 

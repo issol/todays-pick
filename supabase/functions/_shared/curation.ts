@@ -82,8 +82,9 @@ export function weightedRandomPick(
     };
   }
 
-  // Calculate weights - ensure minimum weight of 1
-  const weights = eligible.map((r) => Math.max(r.curationScore, 1));
+  // Calculate weights using sqrt for flatter distribution
+  // This ensures high-score restaurants are preferred but not dominant
+  const weights = eligible.map((r) => Math.sqrt(Math.max(r.curationScore, 1)) + 1);
   const totalWeight = weights.reduce((sum, w) => sum + w, 0);
 
   // Weighted random selection

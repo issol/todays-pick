@@ -209,7 +209,8 @@ function weightedRandomPickClient(restaurants: Restaurant[]): Restaurant | null 
   if (restaurants.length === 0) return null;
   if (restaurants.length === 1) return restaurants[0];
 
-  const weights = restaurants.map(r => Math.max(r.curationScore ?? 1, 1));
+  // Use sqrt for flatter distribution — prefer high scores but allow variety
+  const weights = restaurants.map(r => Math.sqrt(Math.max(r.curationScore ?? 1, 1)) + 1);
   const totalWeight = weights.reduce((sum, w) => sum + w, 0);
 
   let random = Math.random() * totalWeight;

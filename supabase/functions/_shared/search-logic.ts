@@ -45,7 +45,7 @@ export async function searchWithCache(
     categories,
     excludeIds = [],
     areaName,
-    enrichLimit = 30,
+    enrichLimit = 50,
   } = options;
 
   const allRestaurants: RestaurantWithoutScore[] = [];
