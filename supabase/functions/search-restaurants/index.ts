@@ -1,7 +1,6 @@
 import { corsHeaders } from '../_shared/cors.ts';
-import { searchRestaurants } from '../_shared/naver-api.ts';
+import { searchWithCache } from '../_shared/search-logic.ts';
 import { scoreRestaurants } from '../_shared/curation.ts';
-import type { Restaurant } from '../_shared/types.ts';
 
 interface SearchRequestBody {
   lat: number;
@@ -53,54 +52,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Map of category labels to search queries
-    const categoryQueries: Record<string, string> = {
-      korean: '한식',
-      chinese: '중식',
-      japanese: '일식',
-      western: '양식',
-      snacks: '분식',
-      cafe: '카페 디저트',
-      fastfood: '패스트푸드',
-      latenight: '야식',
-    };
-
-    // Search for each category and merge results
-    const allRestaurants: Omit<Restaurant, 'curationScore'>[] = [];
-    const seenIds = new Set<string>();
-
-    for (const category of categories) {
-      const baseQuery = categoryQueries[category];
-      if (!baseQuery) {
-        console.warn(`Unknown category: ${category}`);
-        continue;
-      }
-
-      const query = areaName ? `${areaName} ${baseQuery} 맛집` : baseQuery;
-
-      try {
-        const results = await searchRestaurants(query, lat, lng, radius);
-
-        // Deduplicate by ID
-        for (const restaurant of results) {
-          if (!seenIds.has(restaurant.id)) {
-            seenIds.add(restaurant.id);
-            allRestaurants.push(restaurant);
-          }
-        }
-      } catch (error) {
-        console.error(`Error searching category ${category}:`, error);
-        // Continue with other categories even if one fails
-      }
-    }
-
-    // Filter out excluded IDs
-    const filteredRestaurants = allRestaurants.filter(
-      r => !excludeIds.includes(r.id)
-    );
+    // Search with cache layer (pagination + DB caching)
+    const allRestaurants = await searchWithCache({
+      lat,
+      lng,
+      radius,
+      categories,
+      excludeIds,
+      areaName,
+    });
 
     // Calculate curation scores
-    const scoredRestaurants = scoreRestaurants(filteredRestaurants);
+    const scoredRestaurants = scoreRestaurants(allRestaurants);
 
     // Sort by curation score (highest first)
     scoredRestaurants.sort((a, b) => b.curationScore - a.curationScore);

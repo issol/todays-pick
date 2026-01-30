@@ -247,30 +247,98 @@ async function enrichRestaurantData(
 }
 
 /**
+ * Sub-query variations per category.
+ * Naver Local Search API returns max 5 results per query and ignores pagination.
+ * To get more results, we run multiple semantically different queries per category.
+ */
+const CATEGORY_SUB_QUERIES: Record<string, string[]> = {
+  '한식': ['한식 맛집', '한식 식당', '한정식', '국밥', '백반', '삼겹살', '갈비', '찌개'],
+  '중식': ['중식 맛집', '중식 식당', '중국집', '짜장면', '짬뽕', '마라탕'],
+  '일식': ['일식 맛집', '일식 식당', '초밥', '라멘', '돈가스', '우동'],
+  '양식': ['양식 맛집', '양식 식당', '파스타', '스테이크', '피자', '브런치'],
+  '분식': ['분식 맛집', '분식 식당', '떡볶이', '김밥', '라면'],
+  '카페 디저트': ['카페 맛집', '디저트', '케이크', '베이커리', '브런치카페'],
+  '패스트푸드': ['패스트푸드', '버거', '치킨', '샌드위치'],
+  '야식': ['야식 맛집', '포장마차', '치킨집', '족발', '보쌈'],
+};
+
+/**
+ * Search with multiple query variations in parallel for more diverse results.
+ * Returns deduplicated items from all sub-queries.
+ */
+export async function searchLocalRestaurantsExpanded(
+  areaName: string | undefined,
+  categoryQuery: string
+): Promise<NaverSearchLocalItem[]> {
+  const subQueries = CATEGORY_SUB_QUERIES[categoryQuery] || [`${categoryQuery} 맛집`, `${categoryQuery} 식당`];
+  const prefix = areaName ? `${areaName} ` : '';
+
+  const requests = subQueries.map(sq =>
+    searchLocalRestaurants({
+      query: `${prefix}${sq}`,
+      display: 5,
+      sort: 'comment',
+    }).catch((err) => {
+      console.warn(`Sub-query search failed for "${prefix}${sq}":`, err);
+      return null;
+    })
+  );
+
+  const responses = await Promise.all(requests);
+  const allItems: NaverSearchLocalItem[] = [];
+  const seenKeys = new Set<string>();
+
+  for (const res of responses) {
+    if (!res) continue;
+    for (const item of res.items) {
+      const key = `${item.title}_${item.address}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        allItems.push(item);
+      }
+    }
+  }
+
+  return allItems;
+}
+
+/**
  * Search restaurants around a location with category filter.
+ * Uses query expansion (multiple sub-queries) for more diverse results.
+ * @param enrichLimit - Max number of restaurants to enrich with image+blog (default 30)
  */
 export async function searchRestaurants(
   query: string,
   lat: number,
   lng: number,
-  _radius: number
+  _radius: number,
+  enrichLimit: number = 30,
+  areaName?: string,
+  categoryQuery?: string
 ): Promise<Omit<Restaurant, 'curationScore'>[]> {
-  const response = await searchLocalRestaurants({
-    query,
-    display: 5, // Naver Local Search API max useful results
-    sort: 'comment',
-  });
+  // Use expanded search if we have category info, otherwise fall back to single query
+  let items: NaverSearchLocalItem[];
+  if (categoryQuery) {
+    items = await searchLocalRestaurantsExpanded(areaName, categoryQuery);
+  } else {
+    const response = await searchLocalRestaurants({ query, display: 5, sort: 'comment' });
+    items = response.items;
+  }
 
-  // Parse and sort by distance (no hard cutoff — area name in query ensures locality)
-  const restaurants = response.items
+  // Parse and sort by distance
+  const restaurants = items
     .map(item => parseNaverSearchItem(item, lat, lng))
     .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
 
+  // Enrich only top N restaurants (by distance) to save API calls
+  const toEnrich = restaurants.slice(0, enrichLimit);
+  const rest = restaurants.slice(enrichLimit);
+
   // Enrich with image + blog data via official Naver APIs (sequential to avoid rate limit)
   const enriched: Omit<Restaurant, 'curationScore'>[] = [];
-  for (const r of restaurants) {
+  for (const r of toEnrich) {
     enriched.push(await enrichRestaurantData(r));
   }
 
-  return enriched;
+  return [...enriched, ...rest];
 }

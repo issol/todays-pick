@@ -15,22 +15,6 @@ interface SearchRestaurantsRequest {
   areaName?: string;
 }
 
-interface PickRandomRequest {
-  lat: number;
-  lng: number;
-  radius: number;
-  categories: string[];
-  excludeIds?: string[];
-  userId?: string;
-  areaName?: string;
-}
-
-interface PickRandomResponse {
-  picked: Restaurant;
-  alternatives: Restaurant[];
-  timestamp: string;
-}
-
 export function useRandomPick() {
   const { currentLocation, selectedCategories, radius } = useAppStore();
   const {
@@ -65,7 +49,7 @@ export function useRandomPick() {
       // Get area name for location-aware search
       const areaName = await reverseGeocode(currentLocation.lat, currentLocation.lng).catch(() => null);
 
-      // Step 1: Search restaurants
+      // Step 1: Search restaurants (now returns ~100 results with caching)
       const searchPayload: SearchRestaurantsRequest = {
         lat: currentLocation.lat,
         lng: currentLocation.lng,
@@ -102,39 +86,20 @@ export function useRandomPick() {
         return null;
       }
 
-      // Step 2: Pick random restaurant
+      // Step 2: Pick random from results client-side
       setIsPicking(true);
-      const pickPayload: PickRandomRequest = {
-        lat: currentLocation.lat,
-        lng: currentLocation.lng,
-        radius,
-        categories: selectedCategories,
-        excludeIds: currentPick ? [currentPick.id] : [],
-        ...(areaName && { areaName }),
-      };
-
-      const pickResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/pick-random`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            apikey: anonKey,
-            Authorization: `Bearer ${anonKey}`,
-          },
-          body: JSON.stringify(pickPayload),
-        }
-      );
-
-      if (!pickResponse.ok) {
-        throw new Error('랜덤 선택에 실패했습니다');
+      const picked = weightedRandomPickClient(restaurants);
+      if (picked) {
+        setCurrentPick(picked);
+        // Select up to 3 alternatives
+        const alternatives = restaurants
+          .filter(r => r.id !== picked.id)
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 3);
+        setAlternatives(alternatives);
       }
 
-      const result: PickRandomResponse = await pickResponse.json();
-      setCurrentPick(result.picked);
-      setAlternatives(result.alternatives);
-
-      return result.picked;
+      return picked;
     } catch (error) {
       const message =
         error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다';
@@ -148,7 +113,6 @@ export function useRandomPick() {
     currentLocation,
     selectedCategories,
     radius,
-    currentPick,
     setIsSearching,
     setIsPicking,
     setError,
@@ -158,57 +122,43 @@ export function useRandomPick() {
     setHasSearched,
   ]);
 
-  const retryPick = useCallback(async (): Promise<Restaurant | null> => {
+  /**
+   * Retry pick — fully client-side, no API calls.
+   * Uses searchResults already in memory with weighted random selection.
+   */
+  const retryPick = useCallback((): Restaurant | null => {
     if (searchResults.length === 0) {
       setError('검색 결과가 없습니다. 다시 검색해주세요');
       return null;
     }
 
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
     try {
       setIsPicking(true);
       setError(null);
 
-      if (!currentLocation) {
-        setError('위치 정보가 필요합니다');
+      // Exclude current pick
+      const excludeId = currentPick?.id;
+      const eligible = excludeId
+        ? searchResults.filter(r => r.id !== excludeId)
+        : searchResults;
+
+      if (eligible.length === 0) {
+        setError('더 이상 추천할 식당이 없습니다');
         return null;
       }
 
-      const areaName = await reverseGeocode(currentLocation.lat, currentLocation.lng).catch(() => null);
-
-      const pickPayload: PickRandomRequest = {
-        lat: currentLocation.lat,
-        lng: currentLocation.lng,
-        radius,
-        categories: selectedCategories,
-        excludeIds: currentPick ? [currentPick.id] : [],
-        ...(areaName && { areaName }),
-      };
-
-      const pickResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/pick-random`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            apikey: anonKey,
-            Authorization: `Bearer ${anonKey}`,
-          },
-          body: JSON.stringify(pickPayload),
-        }
-      );
-
-      if (!pickResponse.ok) {
-        throw new Error('랜덤 선택에 실패했습니다');
+      const picked = weightedRandomPickClient(eligible);
+      if (picked) {
+        setCurrentPick(picked);
+        const alternatives = eligible
+          .filter(r => r.id !== picked.id)
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 3);
+        setAlternatives(alternatives);
+        incrementRetry();
       }
 
-      const result: PickRandomResponse = await pickResponse.json();
-      setCurrentPick(result.picked);
-      setAlternatives(result.alternatives);
-      incrementRetry();
-
-      return result.picked;
+      return picked;
     } catch (error) {
       const message =
         error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다';
@@ -218,9 +168,7 @@ export function useRandomPick() {
       setIsPicking(false);
     }
   }, [
-    currentLocation,
-    selectedCategories,
-    radius,
+    searchResults,
     currentPick,
     setIsPicking,
     setError,
@@ -234,4 +182,26 @@ export function useRandomPick() {
     retryPick,
     retryCount,
   };
+}
+
+/**
+ * Weighted random pick on the client side.
+ * Uses curationScore as weight (minimum 1).
+ */
+function weightedRandomPickClient(restaurants: Restaurant[]): Restaurant | null {
+  if (restaurants.length === 0) return null;
+  if (restaurants.length === 1) return restaurants[0];
+
+  const weights = restaurants.map(r => Math.max(r.curationScore ?? 1, 1));
+  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+
+  let random = Math.random() * totalWeight;
+  for (let i = 0; i < weights.length; i++) {
+    random -= weights[i];
+    if (random <= 0) {
+      return restaurants[i];
+    }
+  }
+
+  return restaurants[restaurants.length - 1];
 }

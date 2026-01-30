@@ -1,6 +1,6 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { getSupabaseClient } from '../_shared/supabase-client.ts';
-import { searchRestaurants } from '../_shared/naver-api.ts';
+import { searchWithCache } from '../_shared/search-logic.ts';
 import { scoreRestaurants, weightedRandomPick } from '../_shared/curation.ts';
 import type { PickResult } from '../_shared/types.ts';
 
@@ -55,48 +55,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Map of category labels to search queries
-    const categoryQueries: Record<string, string> = {
-      korean: '한식',
-      chinese: '중식',
-      japanese: '일식',
-      western: '양식',
-      snacks: '분식',
-      cafe: '카페 디저트',
-      fastfood: '패스트푸드',
-      latenight: '야식',
-    };
+    // Search with cache layer (no duplicate logic)
+    const allRestaurants = await searchWithCache({
+      lat,
+      lng,
+      radius,
+      categories,
+      excludeIds,
+      areaName,
+    });
 
-    // Search for restaurants (same logic as search-restaurants)
-    const allRestaurants = [];
-    const seenIds = new Set<string>();
-
-    for (const category of categories) {
-      const baseQuery = categoryQueries[category];
-      if (!baseQuery) continue;
-
-      const query = areaName ? `${areaName} ${baseQuery} 맛집` : baseQuery;
-
-      try {
-        const results = await searchRestaurants(query, lat, lng, radius);
-
-        for (const restaurant of results) {
-          if (!seenIds.has(restaurant.id)) {
-            seenIds.add(restaurant.id);
-            allRestaurants.push(restaurant);
-          }
-        }
-      } catch (error) {
-        console.error(`Error searching category ${category}:`, error);
-      }
-    }
-
-    // Filter out excluded IDs
-    const filteredRestaurants = allRestaurants.filter(
-      r => !excludeIds.includes(r.id)
-    );
-
-    if (filteredRestaurants.length === 0) {
+    if (allRestaurants.length === 0) {
       return new Response(
         JSON.stringify({
           error: 'No restaurants found',
@@ -113,7 +82,7 @@ Deno.serve(async (req) => {
     }
 
     // Calculate curation scores
-    const scoredRestaurants = scoreRestaurants(filteredRestaurants);
+    const scoredRestaurants = scoreRestaurants(allRestaurants);
 
     // Perform weighted random selection
     const pickResult = weightedRandomPick(scoredRestaurants, excludeIds);
