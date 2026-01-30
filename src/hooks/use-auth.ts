@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
@@ -16,27 +16,39 @@ export function useAuth() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const supabase = createClient();
+  // Memoize supabase client to ensure stable reference
+  const supabase = useMemo(() => createClient(), []);
 
   const fetchProfile = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from('users')
-      .select('email, display_name, avatar_url, is_anonymous')
-      .eq('id', userId)
-      .single();
-    if (data) {
-      setProfile(data);
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('email, display_name, avatar_url, is_anonymous')
+        .eq('id', userId)
+        .single();
+      if (data) {
+        setProfile(data);
+      }
+    } catch {
+      // Profile fetch failed — continue without profile
     }
   }, [supabase]);
 
   useEffect(() => {
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      if (user) {
-        await fetchProfile(user.id);
+      try {
+        // Use getSession first (reads from cookie/storage, no server call)
+        const { data: { session } } = await supabase.auth.getSession();
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        if (currentUser) {
+          await fetchProfile(currentUser.id);
+        }
+      } catch {
+        // Auth call failed — continue without user
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     getUser();
 
@@ -59,7 +71,6 @@ export function useAuth() {
     const isAnonymous = user?.is_anonymous ?? profile?.is_anonymous ?? true;
 
     if (isAnonymous && user) {
-      // Link Google identity to existing anonymous account
       const { error } = await supabase.auth.linkIdentity({
         provider: 'google',
         options: {
@@ -69,7 +80,6 @@ export function useAuth() {
       return { error };
     }
 
-    // Fresh sign in
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
