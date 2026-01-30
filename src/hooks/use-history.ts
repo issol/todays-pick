@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useAuthStore } from '@/stores/auth-store';
 import type { Database } from '@/lib/supabase/types';
 import type { Restaurant } from '@/lib/naver/types';
 
@@ -21,25 +22,26 @@ interface UseHistoryResult {
 const PAGE_SIZE = 20;
 
 export function useHistory(): UseHistoryResult {
+  const user = useAuthStore((s) => s.user);
   const [history, setHistory] = useState<PickHistoryRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
+  const supabase = useMemo(() => createClient(), []);
 
   const fetchHistory = useCallback(async (page: number) => {
+    if (!user) {
+      setHistory([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const supabase = createClient();
-
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
       // Get total count
       const { count } = await supabase
         .from('picks_history')
@@ -73,18 +75,15 @@ export function useHistory(): UseHistoryResult {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [supabase, user]);
 
   const addToHistory = useCallback(async (restaurant: Restaurant, retryCount: number) => {
+    if (!user) {
+      console.warn('Cannot add to history: user not authenticated');
+      return;
+    }
+
     try {
-      const supabase = createClient();
-
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
       const { error: insertError } = await supabase
         .from('picks_history')
         .insert({
@@ -93,7 +92,7 @@ export function useHistory(): UseHistoryResult {
           restaurant_name: restaurant.name,
           restaurant_data: restaurant as unknown as Database['public']['Tables']['picks_history']['Insert']['restaurant_data'],
           retry_count: retryCount,
-          was_accepted: false, // Will be updated when user accepts/skips
+          was_accepted: false,
         } as never);
 
       if (insertError) throw insertError;
@@ -101,12 +100,10 @@ export function useHistory(): UseHistoryResult {
       console.error('Failed to add to history:', err);
       throw err;
     }
-  }, []);
+  }, [supabase, user]);
 
   const deleteHistoryItem = useCallback(async (id: string) => {
     try {
-      const supabase = createClient();
-
       const { error: deleteError } = await supabase
         .from('picks_history')
         .delete()
@@ -121,7 +118,7 @@ export function useHistory(): UseHistoryResult {
       console.error('Failed to delete history item:', err);
       throw err;
     }
-  }, []);
+  }, [supabase]);
 
   return {
     history,

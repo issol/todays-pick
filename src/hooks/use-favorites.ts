@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useAuthStore } from '@/stores/auth-store';
 import type { Json } from '@/lib/supabase/types';
 import type { Restaurant } from '@/lib/naver/types';
 
@@ -14,19 +15,21 @@ interface FavoriteRow {
 }
 
 export function useFavorites() {
+  const user = useAuthStore((s) => s.user);
+  const authLoading = useAuthStore((s) => s.loading);
   const [favorites, setFavorites] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const supabase = useMemo(() => createClient(), []);
 
   const fetchFavorites = useCallback(async () => {
+    if (!user) {
+      setFavorites([]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setFavorites([]);
-        return;
-      }
 
       const { data, error } = await supabase
         .from('favorites')
@@ -44,15 +47,12 @@ export function useFavorites() {
     } finally {
       setIsLoading(false);
     }
-  }, [supabase]);
+  }, [supabase, user]);
 
   const addFavorite = useCallback(async (restaurant: Restaurant) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
+    if (!user) throw new Error('User not authenticated');
 
+    try {
       const { error } = await supabase
         .from('favorites')
         .insert({
@@ -68,15 +68,12 @@ export function useFavorites() {
       console.error('Error adding favorite:', error);
       throw error;
     }
-  }, [supabase]);
+  }, [supabase, user]);
 
   const removeFavorite = useCallback(async (restaurantId: string) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
+    if (!user) throw new Error('User not authenticated');
 
+    try {
       const { error } = await supabase
         .from('favorites')
         .delete()
@@ -90,7 +87,7 @@ export function useFavorites() {
       console.error('Error removing favorite:', error);
       throw error;
     }
-  }, [supabase]);
+  }, [supabase, user]);
 
   const isFavorite = useCallback((restaurantId: string): boolean => {
     return favorites.some(fav => fav.id === restaurantId);
@@ -105,8 +102,10 @@ export function useFavorites() {
   }, [isFavorite, addFavorite, removeFavorite]);
 
   useEffect(() => {
-    fetchFavorites();
-  }, [fetchFavorites]);
+    if (!authLoading) {
+      fetchFavorites();
+    }
+  }, [authLoading, fetchFavorites]);
 
   return {
     favorites,

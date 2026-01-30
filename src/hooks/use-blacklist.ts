@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useAuthStore } from '@/stores/auth-store';
 import type { Database } from '@/lib/supabase/types';
 import type { Restaurant } from '@/lib/naver/types';
 
@@ -16,19 +17,21 @@ interface BlacklistItem {
 }
 
 export function useBlacklist() {
+  const user = useAuthStore((s) => s.user);
+  const authLoading = useAuthStore((s) => s.loading);
   const [blacklist, setBlacklist] = useState<BlacklistItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const supabase = useMemo(() => createClient(), []);
 
   const fetchBlacklist = useCallback(async () => {
+    if (!user) {
+      setBlacklist([]);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setBlacklist([]);
-        return;
-      }
-
       const { data, error } = await supabase
         .from('blacklist')
         .select('id, restaurant_id, restaurant_name, reason, created_at')
@@ -53,14 +56,13 @@ export function useBlacklist() {
     } finally {
       setIsLoading(false);
     }
-  }, [supabase]);
+  }, [supabase, user]);
 
   const addToBlacklist = useCallback(
     async (restaurant: Restaurant, reason?: string) => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('User not authenticated');
 
+      try {
         const { error } = await supabase.from('blacklist').insert({
           user_id: user.id,
           restaurant_id: restaurant.id,
@@ -77,15 +79,14 @@ export function useBlacklist() {
         throw error;
       }
     },
-    [supabase, fetchBlacklist]
+    [supabase, user, fetchBlacklist]
   );
 
   const removeFromBlacklist = useCallback(
     async (restaurantId: string) => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('User not authenticated');
 
+      try {
         const { error } = await supabase
           .from('blacklist')
           .delete()
@@ -100,7 +101,7 @@ export function useBlacklist() {
         throw error;
       }
     },
-    [supabase, fetchBlacklist]
+    [supabase, user, fetchBlacklist]
   );
 
   const isBlacklisted = useCallback(
@@ -111,8 +112,10 @@ export function useBlacklist() {
   );
 
   useEffect(() => {
-    fetchBlacklist();
-  }, [fetchBlacklist]);
+    if (!authLoading) {
+      fetchBlacklist();
+    }
+  }, [authLoading, fetchBlacklist]);
 
   return {
     blacklist,
