@@ -65,7 +65,8 @@ export function PickSection() {
   const { currentLocation } = useAppStore();
 
   const [showSlotMachine, setShowSlotMachine] = useState(false);
-  const [showResult, setShowResult] = useState(false);
+  // If we already have a persisted pick (e.g. navigated back), show result immediately
+  const [showResult, setShowResult] = useState(currentPick !== null);
 
   const hasResult = currentPick !== null;
   const isLoading = isSearching || isPicking;

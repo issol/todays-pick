@@ -75,16 +75,24 @@ export const usePickStore = create<PickState>()(
     {
       name: 'todays-pick-store',
       partialize: (state) => ({
+        currentPick: state.currentPick,
+        alternatives: state.alternatives,
+        searchResults: state.searchResults,
         retryCount: state.retryCount,
         lastPickDate: state.lastPickDate,
+        hasSearched: state.hasSearched,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        // Reset retry count if it's a new day
+        // Reset all pick state if it's a new day
         const today = getTodayString();
         if (state.lastPickDate !== today) {
+          state.currentPick = null;
+          state.alternatives = [];
+          state.searchResults = [];
           state.retryCount = 0;
           state.lastPickDate = null;
+          state.hasSearched = false;
         }
       },
     }
