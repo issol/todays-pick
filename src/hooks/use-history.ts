@@ -78,16 +78,22 @@ export function useHistory(): UseHistoryResult {
   }, [supabase, user]);
 
   const addToHistory = useCallback(async (restaurant: Restaurant, retryCount: number) => {
-    if (!user) {
-      console.warn('Cannot add to history: user not authenticated');
-      return;
-    }
-
     try {
+      // Use auth store user, fallback to getUser() if not available
+      let userId = user?.id;
+      if (!userId) {
+        const { data: { user: fetchedUser } } = await supabase.auth.getUser();
+        userId = fetchedUser?.id;
+      }
+      if (!userId) {
+        console.warn('addToHistory: no user available, skipping');
+        return;
+      }
+
       const { error: insertError } = await supabase
         .from('picks_history')
         .insert({
-          user_id: user.id,
+          user_id: userId,
           restaurant_id: restaurant.id,
           restaurant_name: restaurant.name,
           restaurant_data: restaurant as unknown as Database['public']['Tables']['picks_history']['Insert']['restaurant_data'],
@@ -95,7 +101,10 @@ export function useHistory(): UseHistoryResult {
           was_accepted: false,
         } as never);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('addToHistory insert error:', insertError.message, insertError);
+        throw insertError;
+      }
     } catch (err) {
       console.error('Failed to add to history:', err);
       throw err;

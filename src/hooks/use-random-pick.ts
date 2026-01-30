@@ -101,7 +101,7 @@ export function useRandomPick() {
         setAlternatives(alternatives);
 
         // Save to picks history (fire-and-forget, don't block UI)
-        addToHistory(picked, 0).catch(() => {});
+        addToHistory(picked, 0).catch((err) => console.error('[PickHistory] save failed:', err));
       }
 
       return picked;
@@ -164,7 +164,7 @@ export function useRandomPick() {
         incrementRetry();
 
         // Save to picks history (fire-and-forget)
-        addToHistory(picked, retryCount + 1).catch(() => {});
+        addToHistory(picked, retryCount + 1).catch((err) => console.error('[PickHistory] retry save failed:', err));
       }
 
       return picked;
