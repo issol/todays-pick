@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { History, Heart, ShieldOff } from 'lucide-react';
 import { ThemeToggle } from './theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -9,9 +10,11 @@ import { LoginButton } from '@/components/auth/login-button';
 import { UserMenu } from '@/components/auth/user-menu';
 import { LoginPromptDialog } from '@/components/auth/login-prompt-dialog';
 import { useAuth } from '@/hooks/use-auth';
+import { cn } from '@/lib/utils/cn';
 
 export function Header() {
   const { loading, isAnonymous } = useAuth();
+  const pathname = usePathname();
   const [loginPrompt, setLoginPrompt] = useState<{ open: boolean; message: string }>({
     open: false,
     message: '',
@@ -38,19 +41,34 @@ export function Header() {
           <div className="flex items-center gap-2">
             {/* Navigation Links */}
             <Link href="/picks" onClick={(e) => handleProtectedNav(e, '히스토리를 보려면 로그인이 필요합니다')}>
-              <Button variant="ghost" size="icon" title="히스토리">
+              <Button
+                variant="ghost"
+                size="icon"
+                title="히스토리"
+                className={cn(pathname === '/picks' && 'bg-accent text-accent-foreground')}
+              >
                 <History className="h-5 w-5" />
               </Button>
             </Link>
 
             <Link href="/favorites" onClick={(e) => handleProtectedNav(e, '즐겨찾기를 보려면 로그인이 필요합니다')}>
-              <Button variant="ghost" size="icon" title="즐겨찾기">
+              <Button
+                variant="ghost"
+                size="icon"
+                title="즐겨찾기"
+                className={cn(pathname === '/favorites' && 'bg-accent text-accent-foreground')}
+              >
                 <Heart className="h-5 w-5" />
               </Button>
             </Link>
 
             <Link href="/settings/blacklist" onClick={(e) => handleProtectedNav(e, '차단 목록을 보려면 로그인이 필요합니다')}>
-              <Button variant="ghost" size="icon" title="차단 목록">
+              <Button
+                variant="ghost"
+                size="icon"
+                title="차단 목록"
+                className={cn(pathname === '/settings/blacklist' && 'bg-accent text-accent-foreground')}
+              >
                 <ShieldOff className="h-5 w-5" />
               </Button>
             </Link>

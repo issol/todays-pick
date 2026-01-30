@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { RestaurantCard } from '@/components/restaurant/restaurant-card';
+import { FavoriteButton } from '@/components/favorites/favorite-button';
 import type { Restaurant } from '@/lib/naver/types';
 import type { Database } from '@/lib/supabase/types';
 
@@ -77,7 +78,8 @@ export function HistoryItem({ item, onDelete }: HistoryItemProps) {
   );
 
   const actions = (
-    <div className="flex justify-end">
+    <div className="flex items-center justify-between">
+      <FavoriteButton restaurant={restaurant} size="sm" />
       <Button
         variant="ghost"
         size="sm"
