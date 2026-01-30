@@ -25,14 +25,22 @@ export function useAuth() {
   }, []);
 
   const signOut = useCallback(async () => {
-    const supabase = createClient();
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
+    try {
+      // Use server-side signout to properly clear cookies
+      const res = await fetch('/api/auth/signout', { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return { error: new Error(data.error || 'Sign out failed') };
+      }
+      // Also sign out client-side to clear local state
+      const supabase = createClient();
+      await supabase.auth.signOut();
       // Atomic clear — immediately reflects in all subscribers
-      // onAuthStateChange will also fire, but clearAuth is idempotent
       useAuthStore.getState().clearAuth();
+      return { error: null };
+    } catch (err) {
+      return { error: err instanceof Error ? err : new Error('Sign out failed') };
     }
-    return { error };
   }, []);
 
   return {

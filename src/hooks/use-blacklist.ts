@@ -1,12 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useAuthStore } from '@/stores/auth-store';
-import type { Database } from '@/lib/supabase/types';
+import { useState, useEffect, useCallback } from 'react';
 import type { Restaurant } from '@/lib/naver/types';
-
-type BlacklistRow = Database['public']['Tables']['blacklist']['Row'];
 
 interface BlacklistItem {
   id: string;
@@ -17,105 +12,68 @@ interface BlacklistItem {
 }
 
 export function useBlacklist() {
-  const user = useAuthStore((s) => s.user);
-  const authLoading = useAuthStore((s) => s.loading);
   const [blacklist, setBlacklist] = useState<BlacklistItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const supabase = useMemo(() => createClient(), []);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchBlacklist = useCallback(async () => {
-    if (!user) {
-      setBlacklist([]);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('blacklist')
-        .select('id, restaurant_id, restaurant_name, reason, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const rows = data as BlacklistRow[] | null;
-      setBlacklist(
-        (rows || []).map((item) => ({
-          id: item.id,
-          restaurantId: item.restaurant_id,
-          restaurantName: item.restaurant_name,
-          reason: item.reason,
-          createdAt: item.created_at,
-        }))
-      );
+      setIsLoading(true);
+      const res = await fetch('/api/blacklist');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      setBlacklist(data.blacklist ?? []);
     } catch (error) {
       console.error('Error fetching blacklist:', error);
       setBlacklist([]);
     } finally {
       setIsLoading(false);
     }
-  }, [supabase, user]);
+  }, []);
 
-  const addToBlacklist = useCallback(
-    async (restaurant: Restaurant, reason?: string) => {
-      if (!user) throw new Error('User not authenticated');
-
-      try {
-        const { error } = await supabase.from('blacklist').insert({
-          user_id: user.id,
-          restaurant_id: restaurant.id,
-          restaurant_name: restaurant.name,
-          reason: reason || null,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any);
-
-        if (error) throw error;
-
-        await fetchBlacklist();
-      } catch (error) {
-        console.error('Error adding to blacklist:', error);
-        throw error;
+  const addToBlacklist = useCallback(async (restaurant: Restaurant, reason?: string) => {
+    try {
+      const res = await fetch('/api/blacklist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurant, reason }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
       }
-    },
-    [supabase, user, fetchBlacklist]
-  );
+      await fetchBlacklist();
+    } catch (error) {
+      console.error('Error adding to blacklist:', error);
+      throw error;
+    }
+  }, [fetchBlacklist]);
 
-  const removeFromBlacklist = useCallback(
-    async (restaurantId: string) => {
-      if (!user) throw new Error('User not authenticated');
-
-      try {
-        const { error } = await supabase
-          .from('blacklist')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('restaurant_id', restaurantId);
-
-        if (error) throw error;
-
-        await fetchBlacklist();
-      } catch (error) {
-        console.error('Error removing from blacklist:', error);
-        throw error;
+  const removeFromBlacklist = useCallback(async (restaurantId: string) => {
+    try {
+      const res = await fetch(`/api/blacklist?restaurantId=${restaurantId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
       }
-    },
-    [supabase, user, fetchBlacklist]
-  );
+      setBlacklist(prev => prev.filter(item => item.restaurantId !== restaurantId));
+    } catch (error) {
+      console.error('Error removing from blacklist:', error);
+      throw error;
+    }
+  }, []);
 
-  const isBlacklisted = useCallback(
-    (restaurantId: string) => {
-      return blacklist.some((item) => item.restaurantId === restaurantId);
-    },
-    [blacklist]
-  );
+  const isBlacklisted = useCallback((restaurantId: string) => {
+    return blacklist.some(item => item.restaurantId === restaurantId);
+  }, [blacklist]);
 
   useEffect(() => {
-    if (!authLoading) {
-      fetchBlacklist();
-    }
-  }, [authLoading, fetchBlacklist]);
+    fetchBlacklist();
+  }, [fetchBlacklist]);
 
   return {
     blacklist,

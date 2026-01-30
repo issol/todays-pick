@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trash2 } from 'lucide-react';
+import { Trash2, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -69,7 +69,25 @@ export function HistoryItem({ item, onDelete }: HistoryItemProps) {
       className="flex items-center justify-between"
       onPointerDownCapture={(e) => e.stopPropagation()}
     >
-      <FavoriteButton restaurant={restaurant} size="sm" />
+      <div className="flex items-center gap-1">
+        <FavoriteButton restaurant={restaurant} size="sm" />
+        {restaurant.naverPlaceUrl && (
+          <Button
+            variant="ghost"
+            size="sm"
+            asChild
+          >
+            <a
+              href={restaurant.naverPlaceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <ExternalLink className="w-4 h-4 mr-1" />
+              네이버 지도
+            </a>
+          </Button>
+        )}
+      </div>
       <Button
         variant="ghost"
         size="sm"
