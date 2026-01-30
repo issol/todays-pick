@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const CACHE_NAME = `todays-pick-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
@@ -44,6 +44,17 @@ self.addEventListener('fetch', (event) => {
   // Skip Next.js build assets — they use content-hashed filenames
   // and are served with immutable cache headers by Next.js/Vercel
   if (url.pathname.startsWith('/_next/')) {
+    return;
+  }
+
+  // Skip RSC (React Server Components) payload requests
+  // These must always be fresh to match the current client bundle
+  if (request.headers.get('RSC') === '1' || url.searchParams.has('_rsc')) {
+    return;
+  }
+
+  // Skip Supabase auth requests
+  if (url.hostname.includes('supabase')) {
     return;
   }
 
