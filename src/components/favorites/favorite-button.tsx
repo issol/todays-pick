@@ -14,9 +14,10 @@ interface FavoriteButtonProps {
   restaurant: Restaurant;
   size?: 'sm' | 'md';
   bare?: boolean;
+  label?: string;
 }
 
-export function FavoriteButton({ restaurant, size = 'md', bare = false }: FavoriteButtonProps) {
+export function FavoriteButton({ restaurant, size = 'md', bare = false, label }: FavoriteButtonProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isAnonymous } = useAuth();
   const [isToggling, setIsToggling] = useState(false);
@@ -67,8 +68,16 @@ export function FavoriteButton({ restaurant, size = 'md', bare = false }: Favori
   return (
     <>
       {bare ? (
-        <button onClick={handleToggle} disabled={isToggling} className="inline-flex items-center justify-center">
+        <button
+          onClick={handleToggle}
+          disabled={isToggling}
+          className={cn(
+            "inline-flex items-center justify-center",
+            label && "flex-col gap-1.5 w-full h-full"
+          )}
+        >
           {iconElement}
+          {label && <span className="text-xs font-medium">{label}</span>}
         </button>
       ) : (
         <Button

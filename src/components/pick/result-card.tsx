@@ -216,15 +216,13 @@ export function ResultCard({ restaurant, userLocation }: ResultCardProps) {
             </button>
 
             {/* Favorite */}
-            <div className="flex flex-col items-center justify-center gap-1.5 py-4 hover:bg-accent/50 transition-colors">
-              <FavoriteButton restaurant={restaurant} size="sm" bare />
-              <span className="text-xs font-medium">즐겨찾기</span>
+            <div className="flex items-center justify-center py-4 hover:bg-accent/50 transition-colors">
+              <FavoriteButton restaurant={restaurant} size="sm" bare label="즐겨찾기" />
             </div>
 
             {/* Blacklist */}
-            <div className="flex flex-col items-center justify-center gap-1.5 py-4 hover:bg-accent/50 transition-colors">
-              <BlacklistButton restaurant={restaurant} bare />
-              <span className="text-xs font-medium">차단</span>
+            <div className="flex items-center justify-center py-4 hover:bg-accent/50 transition-colors">
+              <BlacklistButton restaurant={restaurant} bare label="차단" />
             </div>
           </div>
         </div>

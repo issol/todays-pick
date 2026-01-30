@@ -19,6 +19,7 @@ import type { Restaurant } from '@/lib/naver/types';
 interface BlacklistButtonProps {
   restaurant: Restaurant;
   bare?: boolean;
+  label?: string;
 }
 
 const REASON_PRESETS = [
@@ -28,7 +29,7 @@ const REASON_PRESETS = [
   '기타',
 ] as const;
 
-export function BlacklistButton({ restaurant, bare = false }: BlacklistButtonProps) {
+export function BlacklistButton({ restaurant, bare = false, label }: BlacklistButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedReason, setSelectedReason] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -67,10 +68,11 @@ export function BlacklistButton({ restaurant, bare = false }: BlacklistButtonPro
         <button
           onClick={handleClick}
           disabled={alreadyBlacklisted}
-          className="inline-flex items-center justify-center"
+          className={`inline-flex items-center justify-center${label ? ' flex-col gap-1.5 w-full h-full' : ''}`}
           title={alreadyBlacklisted ? '이미 차단된 맛집' : '차단 목록에 추가'}
         >
           <Ban className="w-5 h-5 text-muted-foreground" />
+          {label && <span className="text-xs font-medium">{label}</span>}
         </button>
       ) : (
         <Button
