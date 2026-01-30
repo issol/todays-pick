@@ -74,13 +74,15 @@ export function useRandomPick() {
         ...(areaName && { areaName }),
       };
 
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
       const searchResponse = await fetch(
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/search-restaurants`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
           },
           body: JSON.stringify(searchPayload),
         }
@@ -117,7 +119,8 @@ export function useRandomPick() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
           },
           body: JSON.stringify(pickPayload),
         }
@@ -161,6 +164,8 @@ export function useRandomPick() {
       return null;
     }
 
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
     try {
       setIsPicking(true);
       setError(null);
@@ -187,7 +192,8 @@ export function useRandomPick() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
           },
           body: JSON.stringify(pickPayload),
         }
