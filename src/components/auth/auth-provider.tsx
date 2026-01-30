@@ -25,13 +25,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // Initial session load
+    // Initial session load — use getUser() for server-validated session
     const init = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        if (currentUser) await fetchProfile(currentUser.id);
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+        if (user) await fetchProfile(user.id);
       } catch {
         // Auth failed — continue without user
       } finally {
@@ -43,8 +42,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Single auth state listener with event filtering
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // Skip TOKEN_REFRESHED — user/profile haven't changed, no re-fetch needed
-        if (event === 'TOKEN_REFRESHED') return;
+        // Skip events that don't change user/profile
+        if (event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') return;
 
         const currentUser = session?.user ?? null;
         setUser(currentUser);

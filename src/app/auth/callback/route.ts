@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -7,25 +8,23 @@ export async function GET(request: Request) {
   const next = searchParams.get('next') ?? '/';
 
   if (code) {
-    const response = NextResponse.redirect(new URL(next, origin));
-
+    const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           getAll() {
-            return request.headers.get('cookie')
-              ?.split('; ')
-              .map((c) => {
-                const [name, ...rest] = c.split('=');
-                return { name, value: rest.join('=') };
-              }) ?? [];
+            return cookieStore.getAll();
           },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              response.cookies.set(name, value, options);
-            });
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // setAll called from Server Component — middleware handles refresh
+            }
           },
         },
       }
@@ -35,12 +34,11 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error('[auth/callback] Error exchanging code:', error.message);
-      return NextResponse.redirect(new URL(`${next}?auth_error=1`, origin));
+      return NextResponse.redirect(new URL(`/?auth_error=1`, origin));
     }
 
-    return response;
+    return NextResponse.redirect(new URL(next, origin));
   }
 
-  // No code — redirect to home
-  return NextResponse.redirect(new URL(next, origin));
+  return NextResponse.redirect(new URL('/', origin));
 }
