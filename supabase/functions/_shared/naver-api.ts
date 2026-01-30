@@ -132,31 +132,47 @@ export function parseNaverSearchItem(
 
 /**
  * Enrich restaurant with image from Naver Image Search API.
+ * Tries simplified query first, then falls back to name-only search.
  */
 async function fetchImage(
   name: string,
-  address: string,
+  _address: string,
   clientId: string,
   clientSecret: string
 ): Promise<string | undefined> {
-  try {
-    const query = `${name} ${address} 맛집`;
-    const params = new URLSearchParams({ query, display: '1', sort: 'sim' });
-    const response = await fetch(
-      `https://openapi.naver.com/v1/search/image?${params}`,
-      {
-        headers: {
-          'X-Naver-Client-Id': clientId,
-          'X-Naver-Client-Secret': clientSecret,
-        },
+  const queries = [
+    `${name} 맛집`,
+    `${name} 음식점`,
+  ];
+
+  for (const query of queries) {
+    try {
+      const params = new URLSearchParams({ query, display: '1', sort: 'sim' });
+      const response = await fetch(
+        `https://openapi.naver.com/v1/search/image?${params}`,
+        {
+          headers: {
+            'X-Naver-Client-Id': clientId,
+            'X-Naver-Client-Secret': clientSecret,
+          },
+        }
+      );
+      if (!response.ok) {
+        console.warn(`Image search failed for "${query}": ${response.status}`);
+        continue;
       }
-    );
-    if (!response.ok) return undefined;
-    const data = await response.json();
-    return data.items?.[0]?.thumbnail || data.items?.[0]?.link || undefined;
-  } catch {
-    return undefined;
+      const data = await response.json();
+      const item = data.items?.[0];
+      if (item) {
+        // Prefer thumbnail (reliable hosting) over link (may block hotlinking)
+        return item.thumbnail || item.link || undefined;
+      }
+    } catch (err) {
+      console.warn(`Image search error for "${query}":`, err);
+    }
   }
+
+  return undefined;
 }
 
 /**
@@ -249,10 +265,11 @@ export async function searchRestaurants(
     .map(item => parseNaverSearchItem(item, lat, lng))
     .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
 
-  // Enrich with image + blog data via official Naver APIs (parallel)
-  const enriched = await Promise.all(
-    restaurants.map(r => enrichRestaurantData(r))
-  );
+  // Enrich with image + blog data via official Naver APIs (sequential to avoid rate limit)
+  const enriched: Omit<Restaurant, 'curationScore'>[] = [];
+  for (const r of restaurants) {
+    enriched.push(await enrichRestaurantData(r));
+  }
 
   return enriched;
 }

@@ -30,8 +30,17 @@ export async function updateSession(request: NextRequest) {
   );
 
   try {
-    // Skip anonymous session creation for auth callback route
+    // If OAuth code arrives on a non-callback route, redirect to /auth/callback
+    const code = request.nextUrl.searchParams.get('code');
     const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback');
+
+    if (code && !isAuthCallback) {
+      const callbackUrl = new URL('/auth/callback', request.url);
+      callbackUrl.searchParams.set('code', code);
+      const next = request.nextUrl.searchParams.get('next');
+      if (next) callbackUrl.searchParams.set('next', next);
+      return NextResponse.redirect(callbackUrl);
+    }
 
     // Refresh session if expired
     const { data: { user } } = await supabase.auth.getUser();
