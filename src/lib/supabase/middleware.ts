@@ -42,11 +42,16 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(callbackUrl);
     }
 
+    // Skip session handling during OAuth callback — let the route handler manage it
+    if (isAuthCallback) {
+      return supabaseResponse;
+    }
+
     // Refresh session if expired
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Auto-create anonymous session if no user (skip during OAuth callback)
-    if (!user && !isAuthCallback) {
+    // Auto-create anonymous session if no user
+    if (!user) {
       await supabase.auth.signInAnonymously();
     }
   } catch {
