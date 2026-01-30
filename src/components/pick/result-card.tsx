@@ -3,8 +3,7 @@
 import { Restaurant } from '@/lib/naver/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Star, MapPin, Navigation, Phone, ExternalLink } from 'lucide-react';
+import { Star, MapPin, ExternalLink } from 'lucide-react';
 import { FavoriteButton } from '@/components/favorites/favorite-button';
 import { BlacklistButton } from '@/components/blacklist/blacklist-button';
 import { motion } from 'framer-motion';
@@ -93,17 +92,6 @@ export function ResultCard({ restaurant, userLocation }: ResultCardProps) {
   const curationStyle = getCurationScoreStyle(restaurant.curationScore);
   const decodedName = decodeHtmlEntities(restaurant.name);
   const displayAddress = restaurant.roadAddress || restaurant.address;
-
-  const handleNavigate = () => {
-    const naverMapUrl = `https://map.naver.com/v5/directions/-/-/-/transit?c=${restaurant.longitude},${restaurant.latitude},15,0,0,0,dh`;
-    window.open(naverMapUrl, '_blank');
-  };
-
-  const handleCall = () => {
-    if (restaurant.phone) {
-      window.location.href = `tel:${restaurant.phone}`;
-    }
-  };
 
   const handleDetail = () => {
     window.open(restaurant.naverPlaceUrl, '_blank');
@@ -217,31 +205,7 @@ export function ResultCard({ restaurant, userLocation }: ResultCardProps) {
 
         {/* Action Bar - Integrated Footer */}
         <div className="border-t border-border bg-muted/30">
-          <div className="grid grid-cols-5 divide-x divide-border">
-            {/* Navigate */}
-            <button
-              onClick={handleNavigate}
-              className="flex flex-col items-center justify-center gap-1.5 py-4 hover:bg-accent/50 transition-colors"
-            >
-              <Navigation className="w-5 h-5 text-muted-foreground" />
-              <span className="text-xs font-medium">길찾기</span>
-            </button>
-
-            {/* Call */}
-            <button
-              onClick={handleCall}
-              disabled={!restaurant.phone}
-              className={cn(
-                "flex flex-col items-center justify-center gap-1.5 py-4 transition-colors",
-                restaurant.phone
-                  ? "hover:bg-accent/50"
-                  : "opacity-50 cursor-not-allowed"
-              )}
-            >
-              <Phone className="w-5 h-5 text-muted-foreground" />
-              <span className="text-xs font-medium">전화</span>
-            </button>
-
+          <div className="grid grid-cols-3 divide-x divide-border">
             {/* Detail */}
             <button
               onClick={handleDetail}
