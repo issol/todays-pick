@@ -20,19 +20,21 @@ const pretendard = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "오늘의 픽 - 점심 뭐 먹지?",
-  description: "내 주변 맛집을 랜덤으로 추천받아보세요. 오늘 점심 메뉴 고민 끝!",
+  title: "dk 그 뭐더라 - 점심 뭐 먹지?",
+  description:
+    "내 주변 맛집을 랜덤으로 추천받아보세요. 오늘 점심 메뉴 고민 끝!",
   keywords: ["맛집", "점심", "추천", "랜덤", "음식점", "식당"],
   authors: [{ name: "Today's Pick" }],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "오늘의 픽",
+    title: "dk 그 뭐더라",
   },
   openGraph: {
-    title: "오늘의 픽 - 점심 뭐 먹지?",
-    description: "내 주변 맛집을 랜덤으로 추천받아보세요. 오늘 점심 메뉴 고민 끝!",
+    title: "dk 그 뭐더라 - 점심 뭐 먹지?",
+    description:
+      "내 주변 맛집을 랜덤으로 추천받아보세요. 오늘 점심 메뉴 고민 끝!",
     type: "website",
     locale: "ko_KR",
   },
@@ -41,7 +43,8 @@ export const metadata: Metadata = {
       google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
       other: {
         ...(process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION && {
-          "naver-site-verification": process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION,
+          "naver-site-verification":
+            process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION,
         }),
       },
     },
