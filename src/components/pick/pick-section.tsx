@@ -7,7 +7,6 @@ import { useAppStore } from '@/stores/app-store';
 import { PickButton } from './pick-button';
 import { SlotMachine } from './slot-machine';
 import { ResultCard } from './result-card';
-import { ActionButtons } from './action-buttons';
 import { EmptyState } from './empty-state';
 import { RetryCounter } from './retry-counter';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -61,16 +60,7 @@ export function PickSection() {
       {/* Result Card */}
       <AnimatePresence mode="wait">
         {showResult && currentPick && !showSlotMachine && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <ResultCard restaurant={currentPick} userLocation={currentLocation} />
-            <div className="mt-4">
-              <ActionButtons restaurant={currentPick} />
-            </div>
-          </motion.div>
+          <ResultCard restaurant={currentPick} userLocation={currentLocation} />
         )}
       </AnimatePresence>
 
