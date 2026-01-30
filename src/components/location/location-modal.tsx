@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Search, Navigation, Loader2, MapPin } from 'lucide-react';
+import { Search, Navigation, Loader2, MapPin, Check } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -22,31 +22,39 @@ interface LocationModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+type Suggestion = {
+  type: 'address';
+  data: GeocodedAddress;
+} | {
+  type: 'place';
+  data: PlaceSearchResult;
+};
+
+interface PendingLocation {
+  lat: number;
+  lng: number;
+  displayName: string;
+}
+
 export function LocationModal({ open, onOpenChange }: LocationModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  type Suggestion = {
-    type: 'address';
-    data: GeocodedAddress;
-  } | {
-    type: 'place';
-    data: PlaceSearchResult;
-  };
-
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [pendingLocation, setPendingLocation] = useState<PendingLocation | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { requestLocation, isLoading, error } = useGeolocation();
   const { currentLocation, locationAddress, locationError, setLocation, setLocationAddress } = useAppStore();
 
-  // Clear search state when modal closes
+  // Clear state when modal closes
   useEffect(() => {
     if (!open) {
       setSearchQuery('');
       setSearchError(null);
       setSuggestions([]);
       setShowSuggestions(false);
+      setPendingLocation(null);
     }
   }, [open]);
 
@@ -54,6 +62,7 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
   const handleInputChange = useCallback((value: string) => {
     setSearchQuery(value);
     setSearchError(null);
+    setPendingLocation(null);
 
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
@@ -67,7 +76,6 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
 
     debounceRef.current = setTimeout(async () => {
       try {
-        // Search both address geocode and place name in parallel
         const [addrResults, placeResults] = await Promise.all([
           searchAddress(value.trim()),
           searchPlace(value.trim()),
@@ -87,25 +95,38 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
     }, 300);
   }, []);
 
+  // Select a suggestion → set as pending (preview on map, don't save yet)
   const selectSuggestion = useCallback(async (item: Suggestion) => {
-    const lat = item.type === 'address' ? item.data.lat : item.data.lat;
-    const lng = item.type === 'address' ? item.data.lng : item.data.lng;
-    setLocation({ lat, lng });
+    const lat = item.data.lat;
+    const lng = item.data.lng;
 
-    let displayAddr: string;
+    let displayName: string;
     if (item.type === 'address') {
-      displayAddr = item.data.roadAddress || item.data.jibunAddress;
+      displayName = item.data.roadAddress || item.data.jibunAddress;
     } else {
-      displayAddr = item.data.name + (item.data.roadAddress ? ` (${item.data.roadAddress})` : '');
+      displayName = item.data.name + (item.data.roadAddress ? ` (${item.data.roadAddress})` : '');
     }
 
-    // Also get short area name for the location bar
+    // Preview on map immediately
+    setLocation({ lat, lng });
+
+    // Get area name for display
     const areaName = await reverseGeocode(lat, lng);
-    setLocationAddress(areaName || displayAddr);
-    setSearchQuery(displayAddr);
+    const finalName = areaName || displayName;
+
+    setPendingLocation({ lat, lng, displayName: finalName });
+    setSearchQuery(displayName);
     setSuggestions([]);
     setShowSuggestions(false);
-  }, [setLocation, setLocationAddress]);
+  }, [setLocation]);
+
+  // Confirm the pending location
+  const confirmLocation = useCallback(() => {
+    if (!pendingLocation) return;
+    setLocationAddress(pendingLocation.displayName);
+    setPendingLocation(null);
+    onOpenChange(false);
+  }, [pendingLocation, setLocationAddress, onOpenChange]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -115,7 +136,6 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
     setShowSuggestions(false);
 
     try {
-      // Try address geocode first, then place name search
       const [addrResults, placeResults] = await Promise.all([
         searchAddress(searchQuery.trim()),
         searchPlace(searchQuery.trim()),
@@ -156,12 +176,23 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
 
         <div className="mt-6 space-y-4">
           {/* Current Location Display */}
-          {locationAddress && (
+          {locationAddress && !pendingLocation && (
             <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
               <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground">현재 설정된 위치</p>
                 <p className="text-sm font-medium truncate">{locationAddress}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Pending Location Preview */}
+          {pendingLocation && (
+            <div className="flex items-center gap-2 p-3 bg-primary/10 border border-primary/30 rounded-lg">
+              <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-primary/70">선택한 위치</p>
+                <p className="text-sm font-medium truncate">{pendingLocation.displayName}</p>
               </div>
             </div>
           )}
@@ -183,7 +214,6 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
                 if (suggestions.length > 0) setShowSuggestions(true);
               }}
               onBlur={() => {
-                // Delay to allow click on suggestion
                 setTimeout(() => setShowSuggestions(false), 200);
               }}
               className="pl-10 pr-10"
@@ -233,6 +263,17 @@ export function LocationModal({ open, onOpenChange }: LocationModalProps) {
               </div>
             )}
           </div>
+
+          {/* Confirm Selected Location Button */}
+          {pendingLocation && (
+            <Button
+              onClick={confirmLocation}
+              className="w-full"
+            >
+              <Check className="mr-2 h-4 w-4" />
+              이 위치로 설정
+            </Button>
+          )}
 
           {/* Current Location Button */}
           <Button
