@@ -38,22 +38,27 @@ export function UserMenu() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border bg-muted"
+        className="flex items-center gap-2 rounded-full border bg-muted pl-1 pr-3 py-1 hover:bg-accent/50 transition-colors"
         title={displayName}
       >
-        {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={avatarUrl}
-            alt={displayName}
-            className="h-full w-full object-cover"
-            referrerPolicy="no-referrer"
-          />
-        ) : (
-          <span className="text-xs font-medium">
-            {displayName.charAt(0).toUpperCase()}
-          </span>
-        )}
+        <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-background">
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarUrl}
+              alt={displayName}
+              className="h-full w-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <span className="text-xs font-medium">
+              {displayName.charAt(0).toUpperCase()}
+            </span>
+          )}
+        </div>
+        <span className="text-sm font-medium truncate max-w-[80px]">
+          {profile?.display_name || profile?.email?.split('@')[0] || '사용자'}
+        </span>
       </button>
 
       {open && (
