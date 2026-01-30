@@ -76,7 +76,7 @@ export function PickSection() {
     setShowResult(false);
     setShowSlotMachine(false);
 
-    if (retryCount === 0 || searchResults.length === 0) {
+    if (!hasResult || searchResults.length === 0) {
       await searchAndPick();
     } else {
       await retryPick();
