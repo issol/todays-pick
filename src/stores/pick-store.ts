@@ -13,6 +13,7 @@ interface PickState {
   error: string | null;
   searchResults: Restaurant[];
   lastPickDate: string | null;
+  hasSearched: boolean;
 
   // Actions
   setCurrentPick: (pick: Restaurant | null) => void;
@@ -23,6 +24,7 @@ interface PickState {
   setIsPicking: (v: boolean) => void;
   setError: (error: string | null) => void;
   setSearchResults: (results: Restaurant[]) => void;
+  setHasSearched: (v: boolean) => void;
   reset: () => void;
 }
 
@@ -42,6 +44,7 @@ export const usePickStore = create<PickState>()(
       error: null,
       searchResults: [],
       lastPickDate: null,
+      hasSearched: false,
 
       // Actions
       setCurrentPick: (pick) => set({ currentPick: pick, lastPickDate: getTodayString() }),
@@ -55,6 +58,7 @@ export const usePickStore = create<PickState>()(
       setIsPicking: (v) => set({ isPicking: v }),
       setError: (error) => set({ error }),
       setSearchResults: (results) => set({ searchResults: results }),
+      setHasSearched: (v) => set({ hasSearched: v }),
       reset: () =>
         set({
           currentPick: null,
@@ -65,6 +69,7 @@ export const usePickStore = create<PickState>()(
           error: null,
           searchResults: [],
           lastPickDate: null,
+          hasSearched: false,
         }),
     }),
     {

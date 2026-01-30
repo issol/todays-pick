@@ -44,6 +44,7 @@ export function useRandomPick() {
     setIsPicking,
     setError,
     incrementRetry,
+    setHasSearched,
   } = usePickStore();
 
   const searchAndPick = useCallback(async (): Promise<Restaurant | null> => {
@@ -92,9 +93,9 @@ export function useRandomPick() {
       const searchData = await searchResponse.json();
       const restaurants: Restaurant[] = searchData.restaurants ?? searchData;
       setSearchResults(restaurants);
+      setHasSearched(true);
 
       if (restaurants.length === 0) {
-        setError('검색 결과가 없습니다');
         setIsSearching(false);
         return null;
       }
@@ -151,6 +152,7 @@ export function useRandomPick() {
     setSearchResults,
     setCurrentPick,
     setAlternatives,
+    setHasSearched,
   ]);
 
   const retryPick = useCallback(async (): Promise<Restaurant | null> => {

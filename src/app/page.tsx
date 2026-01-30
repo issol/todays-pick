@@ -9,15 +9,16 @@ import { PickSection } from '@/components/pick';
 import { usePickStore } from '@/stores/pick-store';
 
 export default function Home() {
-  const { currentPick } = usePickStore();
+  const { currentPick, isSearching, isPicking, hasSearched } = usePickStore();
   const hasResult = currentPick !== null;
+  const showPickFlow = hasResult || isSearching || isPicking || hasSearched;
 
   return (
     <MobileContainer>
       <Header />
 
       <main className="flex-1 p-4 space-y-6">
-        {!hasResult && (
+        {!showPickFlow && (
           <>
             {/* Welcome Section */}
             <section className="text-center py-8">
