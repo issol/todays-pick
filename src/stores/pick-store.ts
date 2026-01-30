@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { Restaurant } from '@/lib/naver/types';
 import { MAX_RETRIES } from '@/lib/utils/constants';
 
@@ -11,6 +12,7 @@ interface PickState {
   isPicking: boolean;
   error: string | null;
   searchResults: Restaurant[];
+  lastPickDate: string | null;
 
   // Actions
   setCurrentPick: (pick: Restaurant | null) => void;
@@ -24,30 +26,14 @@ interface PickState {
   reset: () => void;
 }
 
-export const usePickStore = create<PickState>((set) => ({
-  // Initial state
-  currentPick: null,
-  alternatives: [],
-  retryCount: 0,
-  isSearching: false,
-  isPicking: false,
-  error: null,
-  searchResults: [],
+function getTodayString(): string {
+  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+}
 
-  // Actions
-  setCurrentPick: (pick) => set({ currentPick: pick }),
-  setAlternatives: (alts) => set({ alternatives: alts }),
-  incrementRetry: () =>
-    set((state) => ({
-      retryCount: Math.min(state.retryCount + 1, MAX_RETRIES),
-    })),
-  resetRetry: () => set({ retryCount: 0 }),
-  setIsSearching: (v) => set({ isSearching: v }),
-  setIsPicking: (v) => set({ isPicking: v }),
-  setError: (error) => set({ error }),
-  setSearchResults: (results) => set({ searchResults: results }),
-  reset: () =>
-    set({
+export const usePickStore = create<PickState>()(
+  persist(
+    (set) => ({
+      // Initial state
       currentPick: null,
       alternatives: [],
       retryCount: 0,
@@ -55,5 +41,47 @@ export const usePickStore = create<PickState>((set) => ({
       isPicking: false,
       error: null,
       searchResults: [],
+      lastPickDate: null,
+
+      // Actions
+      setCurrentPick: (pick) => set({ currentPick: pick, lastPickDate: getTodayString() }),
+      setAlternatives: (alts) => set({ alternatives: alts }),
+      incrementRetry: () =>
+        set((state) => ({
+          retryCount: Math.min(state.retryCount + 1, MAX_RETRIES),
+        })),
+      resetRetry: () => set({ retryCount: 0 }),
+      setIsSearching: (v) => set({ isSearching: v }),
+      setIsPicking: (v) => set({ isPicking: v }),
+      setError: (error) => set({ error }),
+      setSearchResults: (results) => set({ searchResults: results }),
+      reset: () =>
+        set({
+          currentPick: null,
+          alternatives: [],
+          retryCount: 0,
+          isSearching: false,
+          isPicking: false,
+          error: null,
+          searchResults: [],
+          lastPickDate: null,
+        }),
     }),
-}));
+    {
+      name: 'todays-pick-store',
+      partialize: (state) => ({
+        retryCount: state.retryCount,
+        lastPickDate: state.lastPickDate,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        // Reset retry count if it's a new day
+        const today = getTodayString();
+        if (state.lastPickDate !== today) {
+          state.retryCount = 0;
+          state.lastPickDate = null;
+        }
+      },
+    }
+  )
+);
