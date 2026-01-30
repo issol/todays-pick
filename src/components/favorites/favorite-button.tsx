@@ -13,9 +13,10 @@ import { Button } from '@/components/ui/button';
 interface FavoriteButtonProps {
   restaurant: Restaurant;
   size?: 'sm' | 'md';
+  bare?: boolean;
 }
 
-export function FavoriteButton({ restaurant, size = 'md' }: FavoriteButtonProps) {
+export function FavoriteButton({ restaurant, size = 'md', bare = false }: FavoriteButtonProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isAnonymous } = useAuth();
   const [isToggling, setIsToggling] = useState(false);
@@ -43,36 +44,46 @@ export function FavoriteButton({ restaurant, size = 'md' }: FavoriteButtonProps)
 
   const iconSize = size === 'sm' ? 16 : 20;
 
+  const iconElement = (
+    <motion.div
+      animate={{ scale: isToggling ? 0.8 : 1 }}
+      whileTap={{ scale: 0.9 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+    >
+      {favorited ? (
+        <Heart
+          size={iconSize}
+          className="fill-red-500 text-red-500"
+        />
+      ) : (
+        <Heart
+          size={iconSize}
+          className="text-muted-foreground hover:text-red-500 transition-colors"
+        />
+      )}
+    </motion.div>
+  );
+
   return (
     <>
-      <Button
-        variant="ghost"
-        size={size === 'sm' ? 'sm' : 'icon'}
-        onClick={handleToggle}
-        disabled={isToggling}
-        className={cn(
-          'relative',
-          size === 'sm' && 'h-8 w-8'
-        )}
-      >
-        <motion.div
-          animate={{ scale: isToggling ? 0.8 : 1 }}
-          whileTap={{ scale: 0.9 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-        >
-          {favorited ? (
-            <Heart
-              size={iconSize}
-              className="fill-red-500 text-red-500"
-            />
-          ) : (
-            <Heart
-              size={iconSize}
-              className="text-muted-foreground hover:text-red-500 transition-colors"
-            />
+      {bare ? (
+        <button onClick={handleToggle} disabled={isToggling} className="inline-flex items-center justify-center">
+          {iconElement}
+        </button>
+      ) : (
+        <Button
+          variant="ghost"
+          size={size === 'sm' ? 'sm' : 'icon'}
+          onClick={handleToggle}
+          disabled={isToggling}
+          className={cn(
+            'relative',
+            size === 'sm' && 'h-8 w-8'
           )}
-        </motion.div>
-      </Button>
+        >
+          {iconElement}
+        </Button>
+      )}
       <LoginPromptDialog
         open={showLoginPrompt}
         onOpenChange={setShowLoginPrompt}

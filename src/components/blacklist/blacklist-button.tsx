@@ -18,6 +18,7 @@ import type { Restaurant } from '@/lib/naver/types';
 
 interface BlacklistButtonProps {
   restaurant: Restaurant;
+  bare?: boolean;
 }
 
 const REASON_PRESETS = [
@@ -27,7 +28,7 @@ const REASON_PRESETS = [
   '기타',
 ] as const;
 
-export function BlacklistButton({ restaurant }: BlacklistButtonProps) {
+export function BlacklistButton({ restaurant, bare = false }: BlacklistButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedReason, setSelectedReason] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,23 +53,36 @@ export function BlacklistButton({ restaurant }: BlacklistButtonProps) {
 
   const alreadyBlacklisted = isBlacklisted(restaurant.id);
 
+  const handleClick = () => {
+    if (isAnonymous) {
+      setShowLoginPrompt(true);
+      return;
+    }
+    setIsOpen(true);
+  };
+
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => {
-          if (isAnonymous) {
-            setShowLoginPrompt(true);
-            return;
-          }
-          setIsOpen(true);
-        }}
-        disabled={alreadyBlacklisted}
-        title={alreadyBlacklisted ? '이미 차단된 맛집' : '차단 목록에 추가'}
-      >
-        <Ban className="h-5 w-5" />
-      </Button>
+      {bare ? (
+        <button
+          onClick={handleClick}
+          disabled={alreadyBlacklisted}
+          className="inline-flex items-center justify-center"
+          title={alreadyBlacklisted ? '이미 차단된 맛집' : '차단 목록에 추가'}
+        >
+          <Ban className="w-5 h-5 text-muted-foreground" />
+        </button>
+      ) : (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleClick}
+          disabled={alreadyBlacklisted}
+          title={alreadyBlacklisted ? '이미 차단된 맛집' : '차단 목록에 추가'}
+        >
+          <Ban className="h-5 w-5" />
+        </Button>
+      )}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-[425px]">
