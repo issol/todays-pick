@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Json } from '@/lib/supabase/types';
 import type { Restaurant } from '@/lib/naver/types';
@@ -16,13 +16,14 @@ interface FavoriteRow {
 export function useFavorites() {
   const [favorites, setFavorites] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const fetchFavorites = useCallback(async () => {
     try {
       setIsLoading(true);
 
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
       if (!user) {
         setFavorites([]);
         return;
@@ -48,7 +49,8 @@ export function useFavorites() {
 
   const addFavorite = useCallback(async (restaurant: Restaurant) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
       if (!user) {
         throw new Error('User not authenticated');
       }
@@ -72,7 +74,8 @@ export function useFavorites() {
 
   const removeFavorite = useCallback(async (restaurantId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
       if (!user) {
         throw new Error('User not authenticated');
       }

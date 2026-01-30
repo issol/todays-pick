@@ -35,10 +35,11 @@ export function useHistory(): UseHistoryResult {
       const supabase = createClient();
 
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         throw new Error('User not authenticated');
       }
+      const user = session.user;
 
       // Get total count
       const { count } = await supabase
@@ -80,10 +81,11 @@ export function useHistory(): UseHistoryResult {
       const supabase = createClient();
 
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         throw new Error('User not authenticated');
       }
+      const user = session.user;
 
       const { error: insertError } = await supabase
         .from('picks_history')

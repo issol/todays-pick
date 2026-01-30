@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Database } from '@/lib/supabase/types';
 import type { Restaurant } from '@/lib/naver/types';
@@ -18,12 +18,13 @@ interface BlacklistItem {
 export function useBlacklist() {
   const [blacklist, setBlacklist] = useState<BlacklistItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const fetchBlacklist = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
       if (!user) {
         setBlacklist([]);
         return;
@@ -58,7 +59,8 @@ export function useBlacklist() {
   const addToBlacklist = useCallback(
     async (restaurant: Restaurant, reason?: string) => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
         if (!user) throw new Error('User not authenticated');
 
         const { error } = await supabase.from('blacklist').insert({
@@ -83,7 +85,8 @@ export function useBlacklist() {
   const removeFromBlacklist = useCallback(
     async (restaurantId: string) => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
         if (!user) throw new Error('User not authenticated');
 
         const { error } = await supabase
