@@ -23,8 +23,7 @@ export function useBlacklist() {
   const fetchBlacklist = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user ?? null;
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setBlacklist([]);
         return;
@@ -59,8 +58,7 @@ export function useBlacklist() {
   const addToBlacklist = useCallback(
     async (restaurant: Restaurant, reason?: string) => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user ?? null;
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
         const { error } = await supabase.from('blacklist').insert({
@@ -85,8 +83,7 @@ export function useBlacklist() {
   const removeFromBlacklist = useCallback(
     async (restaurantId: string) => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user ?? null;
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
         const { error } = await supabase

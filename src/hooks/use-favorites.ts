@@ -22,8 +22,7 @@ export function useFavorites() {
     try {
       setIsLoading(true);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user ?? null;
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setFavorites([]);
         return;
@@ -49,8 +48,7 @@ export function useFavorites() {
 
   const addFavorite = useCallback(async (restaurant: Restaurant) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user ?? null;
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('User not authenticated');
       }
@@ -74,8 +72,7 @@ export function useFavorites() {
 
   const removeFavorite = useCallback(async (restaurantId: string) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user ?? null;
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('User not authenticated');
       }

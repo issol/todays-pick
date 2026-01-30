@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 import { useAppStore } from '@/stores/app-store';
 import { usePickStore } from '@/stores/pick-store';
+import { useHistory } from '@/hooks/use-history';
 import { reverseGeocode } from '@/lib/naver/maps';
 import type { Restaurant } from '@/lib/naver/types';
 
@@ -30,6 +31,7 @@ export function useRandomPick() {
     incrementRetry,
     setHasSearched,
   } = usePickStore();
+  const { addToHistory } = useHistory();
 
   const searchAndPick = useCallback(async (): Promise<Restaurant | null> => {
     if (!currentLocation) {
@@ -97,6 +99,9 @@ export function useRandomPick() {
           .sort(() => Math.random() - 0.5)
           .slice(0, 3);
         setAlternatives(alternatives);
+
+        // Save to picks history (fire-and-forget, don't block UI)
+        addToHistory(picked, 0).catch(() => {});
       }
 
       return picked;
@@ -120,6 +125,7 @@ export function useRandomPick() {
     setCurrentPick,
     setAlternatives,
     setHasSearched,
+    addToHistory,
   ]);
 
   /**
@@ -156,6 +162,9 @@ export function useRandomPick() {
           .slice(0, 3);
         setAlternatives(alternatives);
         incrementRetry();
+
+        // Save to picks history (fire-and-forget)
+        addToHistory(picked, retryCount + 1).catch(() => {});
       }
 
       return picked;
@@ -175,6 +184,8 @@ export function useRandomPick() {
     setCurrentPick,
     setAlternatives,
     incrementRetry,
+    addToHistory,
+    retryCount,
   ]);
 
   return {
