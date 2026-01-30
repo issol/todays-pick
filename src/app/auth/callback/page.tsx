@@ -6,7 +6,9 @@ import { createClient } from '@/lib/supabase/client';
 export default function AuthCallbackPage() {
   useEffect(() => {
     const handleCallback = async () => {
-      const code = new URL(window.location.href).searchParams.get('code');
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get('code');
+      const next = url.searchParams.get('next') || '/';
 
       if (code) {
         const supabase = createClient();
@@ -14,11 +16,15 @@ export default function AuthCallbackPage() {
 
         if (error) {
           console.error('[auth/callback] Error exchanging code:', error.message);
+          window.location.href = `${next}?auth_error=1`;
+          return;
         }
       }
 
-      // Full page reload to ensure middleware runs and cookies propagate
-      window.location.href = '/';
+      // Redirect — AuthProvider will reload session and update global state
+      // NOTE: Full page reload causes brief loading flash (loading: true -> false).
+      // This is inherent to OAuth redirect flow and is expected behavior.
+      window.location.href = next;
     };
 
     handleCallback();

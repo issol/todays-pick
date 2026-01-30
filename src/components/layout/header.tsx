@@ -56,7 +56,11 @@ export function Header() {
             <ThemeToggle />
 
             {/* Auth */}
-            {!loading && (isAnonymous ? <LoginButton /> : <UserMenu />)}
+            {loading ? (
+              <div className="h-8 w-20 animate-pulse rounded-full bg-muted" />
+            ) : (
+              isAnonymous ? <LoginButton /> : <UserMenu />
+            )}
           </div>
         </div>
       </header>

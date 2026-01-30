@@ -1,76 +1,22 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { User } from '@supabase/supabase-js';
-
-interface UserProfile {
-  email: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
-  is_anonymous: boolean;
-}
+import { useAuthStore } from '@/stores/auth-store';
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // Memoize supabase client to ensure stable reference
-  const supabase = useMemo(() => createClient(), []);
-
-  const fetchProfile = useCallback(async (userId: string) => {
-    try {
-      const { data } = await supabase
-        .from('users')
-        .select('email, display_name, avatar_url, is_anonymous')
-        .eq('id', userId)
-        .single();
-      if (data) {
-        setProfile(data);
-      }
-    } catch {
-      // Profile fetch failed — continue without profile
-    }
-  }, [supabase]);
-
-  useEffect(() => {
-    const getUser = async () => {
-      try {
-        // Use getSession first (reads from cookie/storage, no server call)
-        const { data: { session } } = await supabase.auth.getSession();
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        if (currentUser) {
-          await fetchProfile(currentUser.id);
-        }
-      } catch {
-        // Auth call failed — continue without user
-      } finally {
-        setLoading(false);
-      }
-    };
-    getUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        if (currentUser) {
-          await fetchProfile(currentUser.id);
-        } else {
-          setProfile(null);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, [supabase, fetchProfile]);
+  const user = useAuthStore((s) => s.user);
+  const profile = useAuthStore((s) => s.profile);
+  const loading = useAuthStore((s) => s.loading);
+  const isAnonymous = useAuthStore((s) => s.isAnonymous);
 
   const signInWithGoogle = useCallback(async () => {
-    const isAnonymous = user?.is_anonymous ?? profile?.is_anonymous ?? true;
+    const supabase = createClient();
+    const state = useAuthStore.getState();
 
-    if (isAnonymous && user) {
+    // Use canonical isAnonymous from store (computed by computeIsAnonymous)
+    if (state.isAnonymous && state.user) {
+      // Anonymous user with session — link identity instead of new OAuth
       const { error } = await supabase.auth.linkIdentity({
         provider: 'google',
         options: {
@@ -87,22 +33,18 @@ export function useAuth() {
       },
     });
     return { error };
-  }, [supabase, user, profile]);
+  }, []);
 
   const signOut = useCallback(async () => {
+    const supabase = createClient();
     const { error } = await supabase.auth.signOut();
     if (!error) {
-      setUser(null);
-      setProfile(null);
+      // Atomic clear — immediately reflects in all subscribers
+      // onAuthStateChange will also fire, but clearAuth is idempotent
+      useAuthStore.getState().clearAuth();
     }
     return { error };
-  }, [supabase]);
-
-  // Check if user has a real (non-anonymous) identity provider
-  const hasRealIdentity = user?.identities?.some(
-    (i) => i.provider !== 'anonymous'
-  ) ?? false;
-  const isAnonymous = !user || (!hasRealIdentity && (user.is_anonymous ?? profile?.is_anonymous ?? true));
+  }, []);
 
   return {
     user,
