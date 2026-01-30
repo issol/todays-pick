@@ -65,7 +65,10 @@ export function HistoryItem({ item, onDelete }: HistoryItemProps) {
   );
 
   const actions = (
-    <div className="flex items-center justify-between">
+    <div
+      className="flex items-center justify-between"
+      onPointerDownCapture={(e) => e.stopPropagation()}
+    >
       <FavoriteButton restaurant={restaurant} size="sm" />
       <Button
         variant="ghost"

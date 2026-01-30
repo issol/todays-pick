@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { X, ExternalLink } from 'lucide-react';
 import { useFavorites } from '@/hooks/use-favorites';
-import { useAuthStore } from '@/stores/auth-store';
 import type { Restaurant } from '@/lib/naver/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,11 +32,8 @@ function FavoriteSkeleton() {
 
 export function FavoritesList() {
   const { favorites, isLoading, removeFavorite } = useFavorites();
-  const authLoading = useAuthStore((s) => s.loading);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [removingId, setRemovingId] = useState<string | null>(null);
-
-  const loading = isLoading || authLoading;
 
   const sortedFavorites = [...favorites].sort((a, b) => {
     if (sortBy === 'rating') {
@@ -62,7 +58,7 @@ export function FavoritesList() {
     console.log('Quick pick:', restaurant);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-4">
         <div className="flex gap-2 justify-end">
