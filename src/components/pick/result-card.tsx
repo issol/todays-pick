@@ -8,7 +8,9 @@ import { Star, MapPin, Navigation, Phone, ExternalLink } from 'lucide-react';
 import { FavoriteButton } from '@/components/favorites/favorite-button';
 import { BlacklistButton } from '@/components/blacklist/blacklist-button';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
+// Using native img for restaurant images since Naver Image Search
+// returns URLs from unpredictable domains
+
 import {
   Tooltip,
   TooltipContent,
@@ -117,12 +119,10 @@ export function ResultCard({ restaurant, userLocation }: ResultCardProps) {
         {/* Restaurant Image */}
         <div className="relative w-full h-48 bg-gray-100">
           {restaurant.imageUrl ? (
-            <Image
+            <img
               src={restaurant.imageUrl}
               alt={decodedName}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 600px"
+              className="absolute inset-0 w-full h-full object-cover"
             />
           ) : (
             <div className="flex items-center justify-center h-full text-6xl">

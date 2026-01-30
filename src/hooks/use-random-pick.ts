@@ -89,7 +89,8 @@ export function useRandomPick() {
         throw new Error('맛집 검색에 실패했습니다');
       }
 
-      const restaurants: Restaurant[] = await searchResponse.json();
+      const searchData = await searchResponse.json();
+      const restaurants: Restaurant[] = searchData.restaurants ?? searchData;
       setSearchResults(restaurants);
 
       if (restaurants.length === 0) {
