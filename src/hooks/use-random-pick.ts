@@ -100,8 +100,11 @@ export function useRandomPick() {
           .slice(0, 3);
         setAlternatives(alternatives);
 
-        // Save to picks history (fire-and-forget, don't block UI)
-        addToHistory(picked, 0).catch((err) => console.error('[PickHistory] save failed:', err));
+        // Save to picks history (don't block UI, but log errors visibly)
+        addToHistory(picked, 0).catch((err) => {
+          console.error('[PickHistory] save failed:', err);
+          setError('픽 기록 저장에 실패했습니다');
+        });
       }
 
       return picked;
@@ -163,8 +166,11 @@ export function useRandomPick() {
         setAlternatives(alternatives);
         incrementRetry();
 
-        // Save to picks history (fire-and-forget)
-        addToHistory(picked, retryCount + 1).catch((err) => console.error('[PickHistory] retry save failed:', err));
+        // Save to picks history (don't block UI, but log errors visibly)
+        addToHistory(picked, retryCount + 1).catch((err) => {
+          console.error('[PickHistory] retry save failed:', err);
+          setError('픽 기록 저장에 실패했습니다');
+        });
       }
 
       return picked;
