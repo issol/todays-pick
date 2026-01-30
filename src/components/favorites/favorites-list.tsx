@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Star, TrendingUp } from 'lucide-react';
+import { X, ExternalLink } from 'lucide-react';
 import { useFavorites } from '@/hooks/use-favorites';
 import type { Restaurant } from '@/lib/naver/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { RestaurantCard } from '@/components/restaurant/restaurant-card';
 
 type SortOption = 'newest' | 'rating';
 
@@ -82,47 +82,12 @@ export function FavoritesList() {
       {/* Favorites Grid */}
       <div className="grid gap-4">
         {sortedFavorites.map((restaurant) => (
-          <Card key={restaurant.id} className="relative">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1">
-                  <CardTitle className="text-lg">{restaurant.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {restaurant.category}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  onClick={() => handleRemove(restaurant.id)}
-                  disabled={removingId === restaurant.id}
-                >
-                  <X size={16} />
-                </Button>
-              </div>
-            </CardHeader>
-
-            <CardContent className="space-y-3">
-              {/* Stats */}
-              <div className="flex gap-3 text-sm">
-                <div className="flex items-center gap-1">
-                  <Star size={14} className="fill-yellow-500 text-yellow-500" />
-                  <span className="font-medium">{restaurant.rating.toFixed(1)}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <TrendingUp size={14} className="text-primary" />
-                  <span className="font-medium">{restaurant.curationScore}</span>
-                </div>
-              </div>
-
-              {/* Address */}
-              <p className="text-xs text-muted-foreground line-clamp-1">
-                {restaurant.roadAddress || restaurant.address}
-              </p>
-
-              {/* Actions */}
-              <div className="flex gap-2 pt-2">
+          <RestaurantCard
+            key={restaurant.id}
+            restaurant={restaurant}
+            showDefaultActions
+            actions={
+              <div className="flex gap-2">
                 <Button
                   size="sm"
                   className="flex-1"
@@ -140,12 +105,22 @@ export function FavoritesList() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    상세보기
+                    <ExternalLink className="w-3.5 h-3.5 mr-1" />
+                    상세
                   </a>
                 </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => handleRemove(restaurant.id)}
+                  disabled={removingId === restaurant.id}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
               </div>
-            </CardContent>
-          </Card>
+            }
+          />
         ))}
       </div>
     </div>

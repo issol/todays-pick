@@ -17,20 +17,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils/cn';
-
-function decodeHtmlEntities(text: string): string {
-  const entities: Record<string, string> = {
-    '&amp;': '&',
-    '&lt;': '<',
-    '&gt;': '>',
-    '&quot;': '"',
-    '&#39;': "'",
-    '&apos;': "'",
-    '&#x27;': "'",
-    '&#x2F;': '/',
-  };
-  return text.replace(/&(?:amp|lt|gt|quot|apos|#39|#x27|#x2F);/g, (match) => entities[match] || match);
-}
+import {
+  decodeHtmlEntities,
+  getCurationScoreStyle,
+  estimatePriceRange,
+} from '@/components/restaurant/restaurant-card';
 
 interface ResultCardProps {
   restaurant: Restaurant;
@@ -52,31 +43,6 @@ function formatDistance(meters?: number): string {
   if (!meters) return '';
   if (meters < 1000) return `${Math.round(meters)}m`;
   return `${(meters / 1000).toFixed(1)}km`;
-}
-
-function getCurationScoreStyle(score: number): { bg: string; text: string } {
-  if (score >= 80) return { bg: 'bg-green-100 text-green-800', text: '추천 점수' };
-  if (score >= 50) return { bg: 'bg-yellow-100 text-yellow-800', text: '추천 점수' };
-  return { bg: 'bg-gray-100 text-gray-800', text: '추천 점수' };
-}
-
-function estimatePriceRange(category: string): string {
-  const categoryLower = category.toLowerCase();
-
-  // Budget categories
-  if (categoryLower.includes('한식') ||
-      categoryLower.includes('분식') ||
-      categoryLower.includes('패스트푸드')) {
-    return '₩';
-  }
-
-  // Premium categories
-  if (categoryLower.includes('양식')) {
-    return '₩₩'; // Can be mid to premium
-  }
-
-  // Mid-range categories (default)
-  return '₩₩';
 }
 
 export function ResultCard({ restaurant, userLocation }: ResultCardProps) {

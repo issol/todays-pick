@@ -29,7 +29,9 @@ export function Header() {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center justify-between">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-primary">오늘의 픽</h1>
+            <Link href="/">
+              <h1 className="text-xl font-bold text-primary">오늘의 픽</h1>
+            </Link>
             <span className="text-sm text-muted-foreground">점심 뭐 먹지?</span>
           </div>
 

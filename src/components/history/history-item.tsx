@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trash2, Star, Check, X } from 'lucide-react';
+import { Trash2, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -16,6 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { RestaurantCard } from '@/components/restaurant/restaurant-card';
+import type { Restaurant } from '@/lib/naver/types';
 import type { Database } from '@/lib/supabase/types';
 
 type PickHistoryRow = Database['public']['Tables']['picks_history']['Row'];
@@ -29,11 +30,7 @@ export function HistoryItem({ item, onDelete }: HistoryItemProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const restaurantData = item.restaurant_data as {
-    name: string;
-    category: string;
-    rating: number;
-  } | null;
+  const restaurant = item.restaurant_data as Restaurant | null;
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -51,7 +48,47 @@ export function HistoryItem({ item, onDelete }: HistoryItemProps) {
     locale: ko,
   });
 
-  const rating = restaurantData?.rating || 0;
+  if (!restaurant) {
+    return null;
+  }
+
+  const topBadge = (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-xs text-muted-foreground">{formattedDate}</span>
+      <div className="flex items-center gap-1">
+        {item.was_accepted ? (
+          <>
+            <Check className="w-3.5 h-3.5 text-green-600" />
+            <span className="text-xs text-green-600 font-medium">수락</span>
+          </>
+        ) : (
+          <>
+            <X className="w-3.5 h-3.5 text-red-600" />
+            <span className="text-xs text-red-600 font-medium">건너뜀</span>
+          </>
+        )}
+      </div>
+      {item.retry_count > 0 && (
+        <Badge variant="outline" className="text-xs">
+          재시도 {item.retry_count}회
+        </Badge>
+      )}
+    </div>
+  );
+
+  const actions = (
+    <div className="flex justify-end">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-destructive hover:text-destructive"
+        onClick={() => setShowDeleteDialog(true)}
+      >
+        <Trash2 className="w-4 h-4 mr-1" />
+        삭제
+      </Button>
+    </div>
+  );
 
   return (
     <>
@@ -61,65 +98,11 @@ export function HistoryItem({ item, onDelete }: HistoryItemProps) {
         dragElastic={0.1}
         className="relative"
       >
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-bold text-base truncate">
-                    {item.restaurant_name}
-                  </h3>
-                  {restaurantData?.category && (
-                    <Badge variant="secondary" className="shrink-0 text-xs">
-                      {restaurantData.category}
-                    </Badge>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2">
-                  <span>{formattedDate}</span>
-                  {rating > 0 && (
-                    <div className="flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                      <span>{rating.toFixed(1)}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    {item.was_accepted ? (
-                      <>
-                        <Check className="w-4 h-4 text-green-600" />
-                        <span className="text-sm text-green-600">수락</span>
-                      </>
-                    ) : (
-                      <>
-                        <X className="w-4 h-4 text-red-600" />
-                        <span className="text-sm text-red-600">건너뜀</span>
-                      </>
-                    )}
-                  </div>
-
-                  {item.retry_count > 0 && (
-                    <Badge variant="outline" className="text-xs">
-                      재시도 {item.retry_count}회
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                className="shrink-0"
-                onClick={() => setShowDeleteDialog(true)}
-              >
-                <Trash2 className="w-4 h-4 text-destructive" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <RestaurantCard
+          restaurant={restaurant}
+          topBadge={topBadge}
+          actions={actions}
+        />
 
         {/* Swipe indicator */}
         <div className="absolute right-4 top-0 bottom-0 flex items-center pointer-events-none">
