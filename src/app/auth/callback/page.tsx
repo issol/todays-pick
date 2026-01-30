@@ -1,32 +1,28 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
 export default function AuthCallbackPage() {
-  const router = useRouter();
-
   useEffect(() => {
     const handleCallback = async () => {
-      const supabase = createClient();
+      const code = new URL(window.location.href).searchParams.get('code');
 
-      // The Supabase client automatically detects the code in the URL
-      // and exchanges it for a session via PKCE
-      const { error } = await supabase.auth.exchangeCodeForSession(
-        new URL(window.location.href).searchParams.get('code') ?? ''
-      );
+      if (code) {
+        const supabase = createClient();
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-      if (error) {
-        console.error('[auth/callback] Error exchanging code:', error.message);
+        if (error) {
+          console.error('[auth/callback] Error exchanging code:', error.message);
+        }
       }
 
-      // Redirect to home regardless
-      router.replace('/');
+      // Full page reload to ensure middleware runs and cookies propagate
+      window.location.href = '/';
     };
 
     handleCallback();
-  }, [router]);
+  }, []);
 
   return (
     <div className="flex min-h-[50vh] items-center justify-center">
