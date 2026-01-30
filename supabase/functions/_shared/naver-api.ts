@@ -147,7 +147,7 @@ async function fetchImage(
 
   for (const query of queries) {
     try {
-      const params = new URLSearchParams({ query, display: '1', sort: 'sim' });
+      const params = new URLSearchParams({ query, display: '3', sort: 'sim', filter: 'large' });
       const response = await fetch(
         `https://openapi.naver.com/v1/search/image?${params}`,
         {
@@ -162,11 +162,12 @@ async function fetchImage(
         continue;
       }
       const data = await response.json();
-      const item = data.items?.[0];
-      if (item) {
-        // Prefer thumbnail (reliable hosting) over link (may block hotlinking)
-        return item.thumbnail || item.link || undefined;
+      const items = data.items ?? [];
+      // Prefer link (full-size image) for better quality, fallback to thumbnail
+      for (const item of items) {
+        if (item.link) return item.link;
       }
+      if (items[0]?.thumbnail) return items[0].thumbnail;
     } catch (err) {
       console.warn(`Image search error for "${query}":`, err);
     }
