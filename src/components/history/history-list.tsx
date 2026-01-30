@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useHistory } from '@/hooks/use-history';
 import { useAuth } from '@/hooks/use-auth';
-import { useAuthStore } from '@/stores/auth-store';
 import { HistoryItem } from './history-item';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,14 +13,11 @@ import { LogIn } from 'lucide-react';
 export function HistoryList() {
   const { history, loading, error, hasMore, fetchHistory, deleteHistoryItem, totalCount } = useHistory();
   const { isAnonymous, signInWithGoogle } = useAuth();
-  const authLoading = useAuthStore((s) => s.loading);
   const [currentPage, setCurrentPage] = useState(0);
 
   useEffect(() => {
-    if (!authLoading) {
-      fetchHistory(0);
-    }
-  }, [authLoading, fetchHistory]);
+    fetchHistory(0);
+  }, [fetchHistory]);
 
   const handleLoadMore = () => {
     const nextPage = currentPage + 1;

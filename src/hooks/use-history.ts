@@ -1,8 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useAuthStore } from '@/stores/auth-store';
+import { useState, useCallback } from 'react';
 import type { Database } from '@/lib/supabase/types';
 import type { Restaurant } from '@/lib/naver/types';
 
@@ -19,63 +17,41 @@ interface UseHistoryResult {
   totalCount: number;
 }
 
-const PAGE_SIZE = 20;
-
 export function useHistory(): UseHistoryResult {
-  const user = useAuthStore((s) => s.user);
   const [history, setHistory] = useState<PickHistoryRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
-  const supabase = useMemo(() => createClient(), []);
 
   const fetchHistory = useCallback(async (page: number) => {
-    if (!user) {
-      setHistory([]);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      // Get total count
-      const { count } = await supabase
-        .from('picks_history')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-
-      setTotalCount(count || 0);
-
-      // Fetch paginated history
-      const from = page * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-
-      const { data, error: fetchError } = await supabase
-        .from('picks_history')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('picked_at', { ascending: false })
-        .range(from, to);
-
-      if (fetchError) throw fetchError;
-
-      if (page === 0) {
-        setHistory(data || []);
-      } else {
-        setHistory(prev => [...prev, ...(data || [])]);
+      const res = await fetch(`/api/picks-history?page=${page}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
       }
 
-      setHasMore((data || []).length === PAGE_SIZE);
+      const data = await res.json();
+
+      setTotalCount(data.totalCount ?? 0);
+
+      if (page === 0) {
+        setHistory(data.history ?? []);
+      } else {
+        setHistory(prev => [...prev, ...(data.history ?? [])]);
+      }
+
+      setHasMore(data.hasMore ?? false);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch history'));
     } finally {
       setLoading(false);
     }
-  }, [supabase, user]);
+  }, []);
 
   const addToHistory = useCallback(async (restaurant: Restaurant, retryCount: number) => {
     try {
@@ -97,21 +73,22 @@ export function useHistory(): UseHistoryResult {
 
   const deleteHistoryItem = useCallback(async (id: string) => {
     try {
-      const { error: deleteError } = await supabase
-        .from('picks_history')
-        .delete()
-        .eq('id', id);
+      const res = await fetch(`/api/picks-history?id=${id}`, {
+        method: 'DELETE',
+      });
 
-      if (deleteError) throw deleteError;
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
 
-      // Update local state
       setHistory(prev => prev.filter(item => item.id !== id));
       setTotalCount(prev => Math.max(0, prev - 1));
     } catch (err) {
       console.error('Failed to delete history item:', err);
       throw err;
     }
-  }, [supabase]);
+  }, []);
 
   return {
     history,
