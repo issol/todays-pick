@@ -88,7 +88,11 @@ export function useAuth() {
     return { error };
   }, [supabase]);
 
-  const isAnonymous = user?.is_anonymous ?? profile?.is_anonymous ?? true;
+  // Check if user has a real (non-anonymous) identity provider
+  const hasRealIdentity = user?.identities?.some(
+    (i) => i.provider !== 'anonymous'
+  ) ?? false;
+  const isAnonymous = !user || (!hasRealIdentity && (user.is_anonymous ?? profile?.is_anonymous ?? true));
 
   return {
     user,
