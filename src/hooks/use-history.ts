@@ -79,37 +79,21 @@ export function useHistory(): UseHistoryResult {
 
   const addToHistory = useCallback(async (restaurant: Restaurant, retryCount: number) => {
     try {
-      // Use auth store user, fallback to getUser() if not available
-      let userId = user?.id;
-      if (!userId) {
-        const { data: { user: fetchedUser } } = await supabase.auth.getUser();
-        userId = fetchedUser?.id;
-      }
-      if (!userId) {
-        console.warn('addToHistory: no user available, skipping');
-        return;
-      }
+      const res = await fetch('/api/picks-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurant, retryCount }),
+      });
 
-      const { error: insertError } = await supabase
-        .from('picks_history')
-        .insert({
-          user_id: userId,
-          restaurant_id: restaurant.id,
-          restaurant_name: restaurant.name,
-          restaurant_data: restaurant as unknown as Database['public']['Tables']['picks_history']['Insert']['restaurant_data'],
-          retry_count: retryCount,
-          was_accepted: false,
-        } as never);
-
-      if (insertError) {
-        console.error('addToHistory insert error:', insertError.message, insertError);
-        throw insertError;
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
       }
     } catch (err) {
       console.error('Failed to add to history:', err);
       throw err;
     }
-  }, [supabase, user]);
+  }, []);
 
   const deleteHistoryItem = useCallback(async (id: string) => {
     try {
