@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Heart } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useFavorites } from '@/hooks/use-favorites';
-import { useAuth } from '@/hooks/use-auth';
 import { LoginPromptDialog } from '@/components/auth/login-prompt-dialog';
 import type { Restaurant } from '@/lib/naver/types';
 import { cn } from '@/lib/utils';
@@ -19,7 +18,6 @@ interface FavoriteButtonProps {
 
 export function FavoriteButton({ restaurant, size = 'md', bare = false, label }: FavoriteButtonProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { isAnonymous } = useAuth();
   const [isToggling, setIsToggling] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const favorited = isFavorite(restaurant.id);
@@ -28,16 +26,16 @@ export function FavoriteButton({ restaurant, size = 'md', bare = false, label }:
     e.stopPropagation();
     e.preventDefault();
 
-    if (isAnonymous) {
-      setShowLoginPrompt(true);
-      return;
-    }
-
     try {
       setIsToggling(true);
       await toggleFavorite(restaurant);
-    } catch (error) {
-      console.error('Failed to toggle favorite:', error);
+    } catch (error: unknown) {
+      // Server returns 401 if not authenticated — show login prompt
+      if (error instanceof Error && error.message.includes('401')) {
+        setShowLoginPrompt(true);
+      } else {
+        console.error('Failed to toggle favorite:', error);
+      }
     } finally {
       setIsToggling(false);
     }
