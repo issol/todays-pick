@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trash2, Check, X } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -56,19 +56,6 @@ export function HistoryItem({ item, onDelete }: HistoryItemProps) {
   const topBadge = (
     <div className="flex items-center gap-2 flex-wrap">
       <span className="text-xs text-muted-foreground">{formattedDate}</span>
-      <div className="flex items-center gap-1">
-        {item.was_accepted ? (
-          <>
-            <Check className="w-3.5 h-3.5 text-green-600" />
-            <span className="text-xs text-green-600 font-medium">수락</span>
-          </>
-        ) : (
-          <>
-            <X className="w-3.5 h-3.5 text-red-600" />
-            <span className="text-xs text-red-600 font-medium">건너뜀</span>
-          </>
-        )}
-      </div>
       {item.retry_count > 0 && (
         <Badge variant="outline" className="text-xs">
           재시도 {item.retry_count}회
