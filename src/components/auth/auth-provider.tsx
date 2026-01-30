@@ -33,20 +33,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (user) await fetchProfile(user.id);
       } catch {
         // Auth failed — continue without user
+        setUser(null);
       } finally {
         setLoading(false);
       }
     };
     init();
 
-    // Single auth state listener with event filtering
+    // Single auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // Skip events that don't change user/profile
-        if (event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') return;
+        // Skip token refresh — user/profile haven't changed
+        if (event === 'TOKEN_REFRESHED') return;
 
         const currentUser = session?.user ?? null;
         setUser(currentUser);
+
+        // Ensure loading is false after any auth state change
+        setLoading(false);
+
         if (currentUser) {
           await fetchProfile(currentUser.id);
         } else {

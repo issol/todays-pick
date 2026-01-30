@@ -12,20 +12,9 @@ export function useAuth() {
 
   const signInWithGoogle = useCallback(async () => {
     const supabase = createClient();
-    const state = useAuthStore.getState();
 
-    // Use canonical isAnonymous from store (computed by computeIsAnonymous)
-    if (state.isAnonymous && state.user) {
-      // Anonymous user with session — link identity instead of new OAuth
-      const { error } = await supabase.auth.linkIdentity({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-      return { error };
-    }
-
+    // Always use signInWithOAuth — linkIdentity causes double redirect issues
+    // Anonymous session data will be handled separately if needed
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
