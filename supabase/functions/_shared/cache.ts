@@ -20,6 +20,7 @@ interface CachedRestaurantRow {
   blog_review_count: number;
   image_url: string | null;
   naver_place_url: string | null;
+  menu_info: string | null;
   is_enriched: boolean;
 }
 
@@ -111,6 +112,7 @@ export async function cacheSearchResults(
     blog_review_count: r.blogReviewCount,
     image_url: r.imageUrl || null,
     naver_place_url: r.naverPlaceUrl,
+    menu_info: r.menuInfo || null,
     is_enriched: r.rating > 0 || (r.imageUrl ? true : false),
     cached_at: new Date().toISOString(),
   }));
@@ -183,6 +185,7 @@ function rowToRestaurant(
     reviewCount: row.review_count,
     blogReviewCount: row.blog_review_count,
     imageUrl: row.image_url || undefined,
+    menuInfo: row.menu_info || undefined,
     naverPlaceUrl: row.naver_place_url || `https://map.naver.com/v5/search/${encodeURIComponent(row.name)}`,
   };
 }

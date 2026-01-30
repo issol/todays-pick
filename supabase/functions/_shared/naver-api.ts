@@ -206,8 +206,85 @@ async function fetchBlogCount(
 }
 
 /**
- * Enrich restaurant data using Naver Search APIs (Image + Blog).
- * Uses official APIs for reliability.
+ * Fetch restaurant detail from Naver Place page.
+ * Scrapes the __NEXT_DATA__ JSON embedded in the HTML for menu/price info.
+ */
+async function fetchNaverPlaceInfo(
+  placeId: string
+): Promise<{ menuInfo?: string; rating?: number; reviewCount?: number; imageUrl?: string }> {
+  try {
+    // Use Naver Place internal API for structured data
+    const url = `https://pcmap.place.naver.com/restaurant/${placeId}/home`;
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'ko-KR,ko;q=0.9',
+      },
+    });
+
+    if (!response.ok) return {};
+
+    const html = await response.text();
+
+    // Extract __NEXT_DATA__ JSON
+    const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+    if (!nextDataMatch) return {};
+
+    const nextData = JSON.parse(nextDataMatch[1]);
+    const initialState = nextData?.props?.initialState;
+    if (!initialState) return {};
+
+    // Navigate to place detail
+    const placeDetail = initialState?.place?.detailPlace?.placeDetail;
+    if (!placeDetail) return {};
+
+    // Extract menu info
+    let menuInfo: string | undefined;
+    const menuList = placeDetail.menus ?? placeDetail.menuInfo?.menuList;
+    if (menuList && Array.isArray(menuList) && menuList.length > 0) {
+      // Format: "메뉴1 가격1, 메뉴2 가격2" (top 5)
+      menuInfo = menuList
+        .slice(0, 5)
+        .map((m: { name?: string; price?: string | number }) => {
+          const name = m.name || '';
+          const price = m.price ? `${m.price}원` : '';
+          return price ? `${name} ${price}` : name;
+        })
+        .filter(Boolean)
+        .join(', ');
+    }
+
+    // Extract rating
+    const rating = placeDetail.fsasReview?.rating
+      ?? placeDetail.visitorReviewScore
+      ?? undefined;
+
+    // Extract review count
+    const reviewCount = placeDetail.fsasReview?.count
+      ?? placeDetail.visitorReviewCount
+      ?? undefined;
+
+    // Extract image
+    const imageUrl = placeDetail.imageUrl
+      ?? placeDetail.images?.[0]?.url
+      ?? undefined;
+
+    return {
+      menuInfo: menuInfo || undefined,
+      rating: typeof rating === 'number' ? rating : undefined,
+      reviewCount: typeof reviewCount === 'number' ? reviewCount : undefined,
+      imageUrl,
+    };
+  } catch (err) {
+    console.warn(`Naver Place scrape failed for ${placeId}:`, err);
+    return {};
+  }
+}
+
+/**
+ * Enrich restaurant data using Naver Place scraping + Search APIs (Image + Blog).
+ * Tries Place page first for accurate data, falls back to Search APIs.
  */
 async function enrichRestaurantData(
   restaurant: Omit<Restaurant, 'curationScore'>
@@ -219,30 +296,39 @@ async function enrichRestaurantData(
 
   const address = restaurant.roadAddress || restaurant.address;
 
-  // Fetch image and blog count in parallel
-  const [imageUrl, blogReviewCount] = await Promise.all([
+  // Try Naver Place scraping + Search APIs in parallel
+  const isNumericId = /^\d+$/.test(restaurant.id);
+  const [placeInfo, imageUrl, blogReviewCount] = await Promise.all([
+    isNumericId ? fetchNaverPlaceInfo(restaurant.id) : Promise.resolve({}),
     fetchImage(restaurant.name, address, clientId, clientSecret),
     fetchBlogCount(restaurant.name, address, clientId, clientSecret),
   ]);
 
-  // Estimate rating from blog popularity
-  let rating = 0;
-  if (blogReviewCount >= 1000) rating = 4.5;
-  else if (blogReviewCount >= 500) rating = 4.3;
-  else if (blogReviewCount >= 200) rating = 4.1;
-  else if (blogReviewCount >= 100) rating = 3.9;
-  else if (blogReviewCount >= 50) rating = 3.7;
-  else if (blogReviewCount >= 10) rating = 3.5;
+  // Use Place data if available, fall back to Search API estimates
+  let rating = placeInfo.rating ?? 0;
+  let reviewCount = placeInfo.reviewCount ?? 0;
 
-  // Estimate visitor review count (~3x blog count)
-  const reviewCount = Math.round(blogReviewCount * 3);
+  if (rating === 0) {
+    // Estimate rating from blog popularity
+    if (blogReviewCount >= 1000) rating = 4.5;
+    else if (blogReviewCount >= 500) rating = 4.3;
+    else if (blogReviewCount >= 200) rating = 4.1;
+    else if (blogReviewCount >= 100) rating = 3.9;
+    else if (blogReviewCount >= 50) rating = 3.7;
+    else if (blogReviewCount >= 10) rating = 3.5;
+  }
+
+  if (reviewCount === 0) {
+    reviewCount = Math.round(blogReviewCount * 3);
+  }
 
   return {
     ...restaurant,
     rating,
     reviewCount,
     blogReviewCount: Math.min(blogReviewCount, 9999),
-    imageUrl: imageUrl || restaurant.imageUrl,
+    imageUrl: placeInfo.imageUrl || imageUrl || restaurant.imageUrl,
+    menuInfo: placeInfo.menuInfo,
   };
 }
 
@@ -252,14 +338,39 @@ async function enrichRestaurantData(
  * To get more results, we run multiple semantically different queries per category.
  */
 const CATEGORY_SUB_QUERIES: Record<string, string[]> = {
-  '한식': ['한식 맛집', '한식 식당', '한정식', '국밥', '백반', '삼겹살', '갈비', '찌개', '비빔밥', '냉면', '칼국수', '설렁탕', '김치찌개', '된장찌개', '불고기', '순두부'],
-  '중식': ['중식 맛집', '중식 식당', '중국집', '짜장면', '짬뽕', '마라탕', '양꼬치', '훠궈', '딤섬', '탕수육'],
-  '일식': ['일식 맛집', '일식 식당', '초밥', '라멘', '돈가스', '우동', '이자카야', '사시미', '소바', '카레', '오마카세'],
-  '양식': ['양식 맛집', '양식 식당', '파스타', '스테이크', '피자', '브런치', '리조또', '햄버거', '와인바', '비스트로'],
-  '분식': ['분식 맛집', '분식 식당', '떡볶이', '김밥', '라면', '순대', '만두', '튀김', '쫄면', '우동'],
-  '카페 디저트': ['카페 맛집', '디저트', '케이크', '베이커리', '브런치카페', '마카롱', '아이스크림', '와플', '도넛'],
-  '패스트푸드': ['패스트푸드', '버거', '치킨', '샌드위치', '타코', '핫도그', '피자배달'],
-  '야식': ['야식 맛집', '포장마차', '치킨집', '족발', '보쌈', '곱창', '막창', '회', '라면'],
+  '한식': [
+    '한식 맛집', '한식 식당', '한정식', '국밥', '백반', '삼겹살', '갈비', '찌개',
+    '비빔밥', '냉면', '칼국수', '설렁탕', '김치찌개', '된장찌개', '불고기', '순두부',
+    '쌈밥', '해장국', '보리밥', '제육볶음', '감자탕', '순대국',
+  ],
+  '중식': [
+    '중식 맛집', '중식 식당', '중국집', '짜장면', '짬뽕', '마라탕',
+    '양꼬치', '훠궈', '딤섬', '탕수육', '마라샹궈', '중화요리', '볶음밥',
+  ],
+  '일식': [
+    '일식 맛집', '일식 식당', '초밥', '라멘', '돈가스', '우동',
+    '이자카야', '사시미', '소바', '카레', '오마카세', '텐동', '규동', '야키토리',
+  ],
+  '양식': [
+    '양식 맛집', '양식 식당', '파스타', '스테이크', '피자', '브런치',
+    '리조또', '햄버거', '와인바', '비스트로', '샐러드', '오믈렛', '그릴',
+  ],
+  '분식': [
+    '분식 맛집', '분식 식당', '떡볶이', '김밥', '라면', '순대',
+    '만두', '튀김', '쫄면', '우동', '핫도그', '어묵',
+  ],
+  '카페 디저트': [
+    '카페 맛집', '디저트', '케이크', '베이커리', '브런치카페',
+    '마카롱', '아이스크림', '와플', '도넛', '빙수', '타르트', '커피 맛집',
+  ],
+  '패스트푸드': [
+    '패스트푸드', '버거', '치킨', '샌드위치', '타코', '핫도그',
+    '피자배달', '도시락', '김밥천국', '편의점 도시락',
+  ],
+  '야식': [
+    '야식 맛집', '포장마차', '치킨집', '족발', '보쌈', '곱창',
+    '막창', '회', '라면', '양꼬치', '떡볶이 야식', '피자 야식',
+  ],
 };
 
 /**

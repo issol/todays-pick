@@ -34,6 +34,7 @@ export interface Restaurant {
   reviewCount: number;
   blogReviewCount: number;
   imageUrl?: string;
+  menuInfo?: string;
   naverPlaceUrl: string;
   curationScore: number;
 }
