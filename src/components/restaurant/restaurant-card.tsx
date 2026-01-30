@@ -36,22 +36,6 @@ export function getCurationScoreStyle(score: number): { bg: string; text: string
   return { bg: 'bg-gray-100 text-gray-800', text: '추천 점수' };
 }
 
-export function estimatePriceRange(category: string): string {
-  const categoryLower = category.toLowerCase();
-
-  if (categoryLower.includes('한식') ||
-      categoryLower.includes('분식') ||
-      categoryLower.includes('패스트푸드')) {
-    return '₩';
-  }
-
-  if (categoryLower.includes('양식')) {
-    return '₩₩';
-  }
-
-  return '₩₩';
-}
-
 // --- Component ---
 
 interface RestaurantCardProps {
@@ -115,15 +99,19 @@ export function RestaurantCard({
           </Tooltip>
         </TooltipProvider>
 
-        {/* Category Badges */}
+        {/* Category Badge */}
         <div className="flex gap-1.5 mb-2">
-          <Badge variant="outline" className="text-xs font-semibold">
-            {estimatePriceRange(restaurant.category)}
-          </Badge>
           <Badge variant="secondary">
             {restaurant.category}
           </Badge>
         </div>
+
+        {/* Menu Info */}
+        {restaurant.menuInfo && (
+          <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+            {restaurant.menuInfo}
+          </p>
+        )}
 
         {/* Rating */}
         {restaurant.rating > 0 ? (

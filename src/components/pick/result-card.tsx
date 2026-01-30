@@ -20,7 +20,6 @@ import { cn } from '@/lib/utils/cn';
 import {
   decodeHtmlEntities,
   getCurationScoreStyle,
-  estimatePriceRange,
 } from '@/components/restaurant/restaurant-card';
 
 interface ResultCardProps {
@@ -98,15 +97,19 @@ export function ResultCard({ restaurant, userLocation }: ResultCardProps) {
             </Tooltip>
           </TooltipProvider>
 
-          {/* Category Badges */}
+          {/* Category Badge */}
           <div className="flex gap-1.5 mb-3">
-            <Badge variant="outline" className="text-xs font-semibold">
-              {estimatePriceRange(restaurant.category)}
-            </Badge>
             <Badge variant="secondary">
               {restaurant.category}
             </Badge>
           </div>
+
+          {/* Menu Info */}
+          {restaurant.menuInfo && (
+            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+              {restaurant.menuInfo}
+            </p>
+          )}
 
           {/* Rating */}
           {restaurant.rating > 0 ? (

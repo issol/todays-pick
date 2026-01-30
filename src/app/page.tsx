@@ -4,7 +4,7 @@ import { Header, Footer, MobileContainer } from '@/components/layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { LocationBar } from '@/components/location';
-import { CategoryGrid, QualityFilter, PriceFilter } from '@/components/category';
+import { CategoryGrid, QualityFilter } from '@/components/category';
 import { PickSection } from '@/components/pick';
 import { usePickStore } from '@/stores/pick-store';
 
@@ -60,8 +60,6 @@ export default function Home() {
                   <CategoryGrid />
                   <Separator />
                   <QualityFilter />
-                  <Separator />
-                  <PriceFilter />
                 </CardContent>
               </Card>
             </section>

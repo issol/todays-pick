@@ -130,6 +130,7 @@ export function parseNaverSearchItem(
     reviewCount: 0, // Will be enriched
     blogReviewCount: 0, // Will be enriched
     imageUrl: undefined, // Will be enriched
+    menuInfo: undefined, // Will be enriched
     naverPlaceUrl: item.link || `https://map.naver.com/v5/search/${encodeURIComponent(name)}`,
   };
 }
