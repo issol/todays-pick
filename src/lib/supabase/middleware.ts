@@ -47,11 +47,17 @@ export async function updateSession(request: NextRequest) {
       return supabaseResponse;
     }
 
+    // Check if auth cookies exist (indicates a previous session)
+    const hasAuthCookies = request.cookies.getAll().some(
+      (c) => c.name.startsWith('sb-') && c.name.includes('auth-token')
+    );
+
     // Refresh session if expired
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Auto-create anonymous session if no user
-    if (!user) {
+    // Auto-create anonymous session ONLY if no user AND no existing auth cookies
+    // This prevents overwriting a valid session when getUser() temporarily fails
+    if (!user && !hasAuthCookies) {
       await supabase.auth.signInAnonymously();
     }
   } catch {
