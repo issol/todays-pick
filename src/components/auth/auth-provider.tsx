@@ -1,8 +1,21 @@
 'use client';
 
 import { useEffect } from 'react';
+import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import { useAuthStore } from '@/stores/auth-store';
+import type { UserProfile } from '@/stores/auth-store';
+
+// Extract profile from user.user_metadata (Google OAuth data) as fallback
+function profileFromMetadata(user: User): UserProfile {
+  const meta = user.user_metadata ?? {};
+  return {
+    email: user.email ?? meta.email ?? null,
+    display_name: meta.full_name ?? meta.name ?? null,
+    avatar_url: meta.avatar_url ?? meta.picture ?? null,
+    is_anonymous: user.is_anonymous ?? false,
+  };
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setUser = useAuthStore((s) => s.setUser);
@@ -12,16 +25,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const supabase = createClient();
 
-    const fetchProfile = async (userId: string) => {
+    const fetchProfile = async (user: User) => {
+      // First, set profile from auth metadata immediately (no network wait)
+      setProfile(profileFromMetadata(user));
+
+      // Then try to get richer profile from DB (may have extra fields)
       try {
         const { data } = await supabase
           .from('users')
           .select('email, display_name, avatar_url, is_anonymous')
-          .eq('id', userId)
+          .eq('id', user.id)
           .single();
         if (data) setProfile(data);
       } catch {
-        // Profile fetch failed — continue without profile
+        // DB profile fetch failed — metadata fallback already set
       }
     };
 
@@ -30,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         setUser(user);
-        if (user) await fetchProfile(user.id);
+        if (user) await fetchProfile(user);
       } catch {
         // Auth failed — continue without user
         setUser(null);
@@ -53,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
 
         if (currentUser) {
-          await fetchProfile(currentUser.id);
+          await fetchProfile(currentUser);
         } else {
           setProfile(null);
         }
