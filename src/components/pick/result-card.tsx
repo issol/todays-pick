@@ -9,7 +9,27 @@ import { FavoriteButton } from '@/components/favorites/favorite-button';
 import { BlacklistButton } from '@/components/blacklist/blacklist-button';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils/cn';
+
+function decodeHtmlEntities(text: string): string {
+  const entities: Record<string, string> = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&apos;': "'",
+    '&#x27;': "'",
+    '&#x2F;': '/',
+  };
+  return text.replace(/&(?:amp|lt|gt|quot|apos|#39|#x27|#x2F);/g, (match) => entities[match] || match);
+}
 
 interface ResultCardProps {
   restaurant: Restaurant;
@@ -69,6 +89,8 @@ export function ResultCard({ restaurant, userLocation }: ResultCardProps) {
     : restaurant.distance;
 
   const curationStyle = getCurationScoreStyle(restaurant.curationScore);
+  const decodedName = decodeHtmlEntities(restaurant.name);
+  const displayAddress = restaurant.roadAddress || restaurant.address;
 
   const handleNavigate = () => {
     const naverMapUrl = `https://map.naver.com/v5/directions/-/-/-/transit?c=${restaurant.longitude},${restaurant.latitude},15,0,0,0,dh`;
@@ -97,7 +119,7 @@ export function ResultCard({ restaurant, userLocation }: ResultCardProps) {
           {restaurant.imageUrl ? (
             <Image
               src={restaurant.imageUrl}
-              alt={restaurant.name}
+              alt={decodedName}
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 600px"
@@ -110,17 +132,26 @@ export function ResultCard({ restaurant, userLocation }: ResultCardProps) {
         </div>
 
         <CardContent className="p-6">
-          {/* Restaurant Name & Category */}
-          <div className="flex items-start justify-between gap-2 mb-3">
-            <h2 className="text-xl font-bold truncate flex-1">{restaurant.name}</h2>
-            <div className="flex gap-1.5 shrink-0">
-              <Badge variant="outline" className="text-xs font-semibold">
-                {estimatePriceRange(restaurant.category)}
-              </Badge>
-              <Badge variant="secondary">
-                {restaurant.category}
-              </Badge>
-            </div>
+          {/* Restaurant Name */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <h2 className="text-xl font-bold truncate mb-2">{decodedName}</h2>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{decodedName}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          {/* Category Badges */}
+          <div className="flex gap-1.5 mb-3">
+            <Badge variant="outline" className="text-xs font-semibold">
+              {estimatePriceRange(restaurant.category)}
+            </Badge>
+            <Badge variant="secondary">
+              {restaurant.category}
+            </Badge>
           </div>
 
           {/* Rating */}
@@ -161,9 +192,18 @@ export function ResultCard({ restaurant, userLocation }: ResultCardProps) {
           )}
 
           {/* Address */}
-          <p className="text-sm text-gray-600 mb-3 truncate">
-            {restaurant.roadAddress || restaurant.address}
-          </p>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="text-sm text-gray-600 mb-3 truncate cursor-default">
+                  {displayAddress}
+                </p>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{displayAddress}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           {/* Curation Score */}
           {restaurant.curationScore > 0 && (
