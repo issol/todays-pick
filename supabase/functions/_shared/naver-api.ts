@@ -459,10 +459,13 @@ export async function searchRestaurants(
   const toEnrich = restaurants.slice(0, enrichLimit);
   const rest = restaurants.slice(enrichLimit);
 
-  // Enrich with image + blog data via official Naver APIs (sequential to avoid rate limit)
+  // Enrich in parallel batches of 5 to balance speed vs rate limiting
+  const BATCH_SIZE = 5;
   const enriched: Omit<Restaurant, 'curationScore'>[] = [];
-  for (const r of toEnrich) {
-    enriched.push(await enrichRestaurantData(r));
+  for (let i = 0; i < toEnrich.length; i += BATCH_SIZE) {
+    const batch = toEnrich.slice(i, i + BATCH_SIZE);
+    const results = await Promise.all(batch.map(r => enrichRestaurantData(r)));
+    enriched.push(...results);
   }
 
   return [...enriched, ...rest];
