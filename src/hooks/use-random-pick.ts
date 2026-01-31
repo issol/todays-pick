@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 import { useAppStore } from '@/stores/app-store';
 import { usePickStore } from '@/stores/pick-store';
+import { useAuthStore } from '@/stores/auth-store';
 import { useHistory } from '@/hooks/use-history';
 import { reverseGeocode } from '@/lib/naver/maps';
 import type { Restaurant } from '@/lib/naver/types';
@@ -31,6 +32,7 @@ export function useRandomPick() {
     incrementRetry,
     setHasSearched,
   } = usePickStore();
+  const { isAnonymous } = useAuthStore();
   const { addToHistory } = useHistory();
 
   const searchAndPick = useCallback(async (): Promise<Restaurant | null> => {
@@ -100,11 +102,11 @@ export function useRandomPick() {
           .slice(0, 3);
         setAlternatives(alternatives);
 
-        // Save to picks history (don't block UI, but log errors visibly)
-        addToHistory(picked, 0).catch((err) => {
-          console.error('[PickHistory] save failed:', err);
-          setError('픽 기록 저장에 실패했습니다');
-        });
+        if (!isAnonymous) {
+          addToHistory(picked, 0).catch((err) => {
+            console.error('[PickHistory] save failed:', err);
+          });
+        }
       }
 
       return picked;
@@ -128,6 +130,7 @@ export function useRandomPick() {
     setCurrentPick,
     setAlternatives,
     setHasSearched,
+    isAnonymous,
     addToHistory,
   ]);
 
@@ -166,11 +169,11 @@ export function useRandomPick() {
         setAlternatives(alternatives);
         incrementRetry();
 
-        // Save to picks history (don't block UI, but log errors visibly)
-        addToHistory(picked, retryCount + 1).catch((err) => {
-          console.error('[PickHistory] retry save failed:', err);
-          setError('픽 기록 저장에 실패했습니다');
-        });
+        if (!isAnonymous) {
+          addToHistory(picked, retryCount + 1).catch((err) => {
+            console.error('[PickHistory] retry save failed:', err);
+          });
+        }
       }
 
       return picked;
@@ -190,6 +193,7 @@ export function useRandomPick() {
     setCurrentPick,
     setAlternatives,
     incrementRetry,
+    isAnonymous,
     addToHistory,
     retryCount,
   ]);
