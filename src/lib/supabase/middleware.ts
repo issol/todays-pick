@@ -2,6 +2,17 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
+  // OAuth Flow Protection:
+  // 1. Stray ?code= params on non-callback routes are redirected to /auth/callback
+  // 2. /auth/callback requests get early-return (no session manipulation)
+  // 3. For all other routes: refresh expired tokens via getUser()
+  // 4. Auto-create anonymous session ONLY for genuinely new visitors
+  //    (no user AND no auth cookies, preventing overwrites of valid sessions)
+  //
+  // NOTE: Do NOT add a code-verifier cookie check here. The code-verifier
+  // cookie is consumed by exchangeCodeForSession() in the callback route
+  // and will not exist on any subsequent request reaching middleware.
+
   let supabaseResponse = NextResponse.next({
     request,
   });

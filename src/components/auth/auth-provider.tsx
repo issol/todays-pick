@@ -42,6 +42,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
+    // Auth Timing Gap (documented, not a bug):
+    // After OAuth redirect, there is a brief window (~<100ms) where
+    // isAnonymous is still true while this init() call resolves.
+    // This is acceptable because:
+    // 1. loading=true during this window, so UI can gate interactions
+    // 2. onAuthStateChange fires SIGNED_IN immediately when session detected
+    // 3. The window is too short for user interaction (they must navigate,
+    //    select categories, and click pick — all before getUser() resolves)
+
     // Initial session load — use getUser() for server-validated session
     const init = async () => {
       try {
