@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { X, ExternalLink } from 'lucide-react';
+import { Trash2, ExternalLink } from 'lucide-react';
 import { useFavorites } from '@/hooks/use-favorites';
 import type { Restaurant } from '@/lib/naver/types';
+import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { BlacklistButton } from '@/components/blacklist/blacklist-button';
 import { RestaurantCard } from '@/components/restaurant/restaurant-card';
 
 type SortOption = 'newest' | 'rating';
@@ -46,16 +48,13 @@ export function FavoritesList() {
     try {
       setRemovingId(restaurantId);
       await removeFavorite(restaurantId);
+      toast.success('즐겨찾기에서 제거됨');
     } catch (error) {
       console.error('Failed to remove favorite:', error);
+      toast.error('삭제에 실패했습니다');
     } finally {
       setRemovingId(null);
     }
-  };
-
-  const handleQuickPick = (restaurant: Restaurant) => {
-    // TODO: Integrate with pick system
-    console.log('Quick pick:', restaurant);
   };
 
   if (isLoading) {
@@ -114,39 +113,28 @@ export function FavoritesList() {
           <RestaurantCard
             key={restaurant.id}
             restaurant={restaurant}
-            showDefaultActions
             actions={
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => handleQuickPick(restaurant)}
+              <div className="grid grid-cols-3 divide-x divide-border -mx-4 -mb-3 border-t border-border mt-3">
+                <a
+                  href={restaurant.naverPlaceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center justify-center gap-1.5 py-3 hover:bg-accent/50 transition-colors"
                 >
-                  이 맛집으로!
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  asChild
-                >
-                  <a
-                    href={restaurant.naverPlaceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 mr-1" />
-                    상세
-                  </a>
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-destructive hover:text-destructive"
+                  <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-xs font-medium">상세보기</span>
+                </a>
+                <div className="flex items-center justify-center py-3 hover:bg-accent/50 transition-colors">
+                  <BlacklistButton restaurant={restaurant} bare label="차단" />
+                </div>
+                <button
                   onClick={() => handleRemove(restaurant.id)}
                   disabled={removingId === restaurant.id}
+                  className="flex flex-col items-center justify-center gap-1.5 py-3 hover:bg-accent/50 transition-colors text-destructive"
                 >
-                  <X className="w-4 h-4" />
-                </Button>
+                  <Trash2 className="w-4 h-4" />
+                  <span className="text-xs font-medium">삭제</span>
+                </button>
               </div>
             }
           />
