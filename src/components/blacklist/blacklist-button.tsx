@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Ban } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -43,10 +44,12 @@ export function BlacklistButton({ restaurant, bare = false, label }: BlacklistBu
     setIsSubmitting(true);
     try {
       await addToBlacklist(restaurant, selectedReason || undefined);
+      toast.success('차단 목록에 추가됨');
       setIsOpen(false);
       setSelectedReason('');
     } catch (error) {
       console.error('Failed to add to blacklist:', error);
+      toast.error('차단 처리에 실패했습니다');
     } finally {
       setIsSubmitting(false);
     }
